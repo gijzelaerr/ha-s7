@@ -22,3 +22,6 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
+          # brands: registration in home-assistant/brands is a separate,
+          # manual PR. Ignore while that's pending.
+          ignore: brands
