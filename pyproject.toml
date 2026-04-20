@@ -1,0 +1,50 @@
+[project]
+name = "ha-s7"
+version = "0.1.0"
+description = "Home Assistant integration for Siemens S7 PLCs"
+readme = "README.md"
+requires-python = ">=3.13"
+license = {text = "MIT"}
+authors = [
+    {name = "Gijs Molenaar", email = "gijsmolenaar@gmail.com"},
+]
+# Runtime deps are declared in custom_components/s7/manifest.json.
+# This file only declares dev/test deps for local development.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    # python-snap7 4.0 is unreleased; install from master for now.
+    "python-snap7 @ git+https://github.com/gijzelaerr/python-snap7.git@master",
+    "homeassistant>=2024.12.0",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-homeassistant-custom-component>=0.13.170",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pre-commit>=3.6",
+]
+
+[tool.ruff]
+line-length = 130
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501"]  # line length handled by formatter
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+# HA's runtime imports are dynamic — be lenient with missing stubs
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
