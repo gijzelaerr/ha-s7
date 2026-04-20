@@ -13,10 +13,20 @@ from .entity import S7BaseEntity
 
 # Writable numeric types that map to a number entity
 _NUMBER_TYPES = {
-    "BYTE", "SINT", "USINT",
-    "INT", "UINT", "WORD",
-    "DINT", "UDINT", "DWORD", "REAL",
-    "LINT", "ULINT", "LWORD", "LREAL",
+    "BYTE",
+    "SINT",
+    "USINT",
+    "INT",
+    "UINT",
+    "WORD",
+    "DINT",
+    "UDINT",
+    "DWORD",
+    "REAL",
+    "LINT",
+    "ULINT",
+    "LWORD",
+    "LREAL",
 }
 
 # Sensible min/max per S7 type

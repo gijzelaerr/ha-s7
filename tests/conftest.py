@@ -13,19 +13,24 @@ from collections.abc import Generator
 from ctypes import c_char
 
 import pytest
-
 from snap7.server import Server as LegacyServer
 from snap7.type import SrvArea
 
 
-@pytest.fixture
-def enable_custom_integrations(enable_custom_integrations):  # noqa: F811
-    """Auto-enable loading `custom_components/` via pytest-homeassistant-custom-component."""
+@pytest.fixture(autouse=True)
+def auto_enable_custom_integrations(enable_custom_integrations):  # noqa: F811
+    """Auto-enable loading `custom_components/` for every test."""
+    yield
+
+
+@pytest.fixture(autouse=True)
+def _allow_sockets(socket_enabled):  # noqa: F811
+    """Allow real network sockets (needed to talk to the snap7 server fixture)."""
     yield
 
 
 @pytest.fixture
-def s7_server() -> Generator[tuple[LegacyServer, int, bytearray], None, None]:
+def s7_server() -> Generator[tuple[LegacyServer, int, bytearray]]:
     """Start a python-snap7 legacy S7 server pre-populated with DB1 test data.
 
     Yields (server, port, db1_data). The server runs for the lifetime of the

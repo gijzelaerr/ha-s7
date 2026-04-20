@@ -20,9 +20,7 @@ async def test_user_flow_success(hass: HomeAssistant, s7_server) -> None:
     """User provides valid PLC details and tags → entry is created."""
     _srv, port, _db1 = s7_server
 
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
     assert result["type"] == FlowResultType.FORM
     assert result["step_id"] == "user"
 
@@ -45,9 +43,7 @@ async def test_user_flow_success(hass: HomeAssistant, s7_server) -> None:
 
 async def test_user_flow_cannot_connect(hass: HomeAssistant) -> None:
     """No server listening → config flow reports cannot_connect."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
 
     # Use an unused port so the connect attempt fails fast
     result2 = await hass.config_entries.flow.async_configure(
@@ -70,9 +66,7 @@ async def test_user_flow_duplicate_aborts(hass: HomeAssistant, s7_server) -> Non
     _srv, port, _ = s7_server
 
     # First flow
-    first = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    first = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
     await hass.config_entries.flow.async_configure(
         first["flow_id"],
         {
@@ -86,9 +80,7 @@ async def test_user_flow_duplicate_aborts(hass: HomeAssistant, s7_server) -> Non
     await hass.async_block_till_done()
 
     # Second flow — same host/port
-    second = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
+    second = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
     result = await hass.config_entries.flow.async_configure(
         second["flow_id"],
         {

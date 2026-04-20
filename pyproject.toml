@@ -1,18 +1,22 @@
-[project]
-name = "ha-s7"
-version = "0.1.0"
-description = "Home Assistant integration for Siemens S7 PLCs"
-readme = "README.md"
-requires-python = ">=3.13"
-license = {text = "MIT"}
-authors = [
-    {name = "Gijs Molenaar", email = "gijsmolenaar@gmail.com"},
-]
+# ha-s7 is a Home Assistant custom integration, not a Python package.
 # Runtime deps are declared in custom_components/s7/manifest.json.
-# This file only declares dev/test deps for local development.
-dependencies = []
+# This file only carries dev tooling config and a dev dependency group.
+#
+# We still declare a minimal [project] block so that uv picks the right
+# Python version. It is NOT installed as a package (no entrypoints,
+# no custom_components registration).
+[project]
+name = "ha-s7-dev"
+version = "0"
+requires-python = ">=3.13,<3.14"
 
-[project.optional-dependencies]
+[tool.uv]
+package = false
+
+[dependency-groups]
+# PEP 735 dependency group — installs dev tools without requiring the
+# project itself to be installed as a package (which conflicts with HA's
+# custom_components loader).
 dev = [
     # python-snap7 4.0 is unreleased; install from master for now.
     "python-snap7 @ git+https://github.com/gijzelaerr/python-snap7.git@master",
@@ -35,10 +39,32 @@ ignore = ["E501"]  # line length handled by formatter
 
 [tool.mypy]
 python_version = "3.13"
-strict = true
-warn_unused_ignores = true
+# HA integrations are typically not mypy-strict — the HA ecosystem uses
+# dynamic imports extensively, and strict-mode compliance across all HA
+# APIs is not practical for third-party integrations.
+check_untyped_defs = true
 warn_redundant_casts = true
-# HA's runtime imports are dynamic — be lenient with missing stubs
+# custom_components/s7/ is an HA integration namespace, not a top-level
+# `s7` package. Force mypy to use explicit package bases so it resolves
+# our integration as `custom_components.s7` and the installed python-snap7
+# `s7` package unambiguously.
+explicit_package_bases = true
+namespace_packages = true
+mypy_path = "$MYPY_CONFIG_FILE_DIR"
+
+# HA's internal modules don't ship stubs for all public APIs.
+# Silence those specifically rather than globally suppressing imports,
+# so mypy can still see python-snap7's py.typed symbols.
+[[tool.mypy.overrides]]
+module = "homeassistant.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pytest_homeassistant_custom_component.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "voluptuous.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

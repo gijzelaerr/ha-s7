@@ -88,7 +88,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                     password=self._password,
                 )
             values = self._client.read_tags(self._tags)
-            return dict(zip(self._tags, values))
+            return dict(zip(self._tags, values, strict=True))
 
         try:
             return await self.hass.async_add_executor_job(_read)

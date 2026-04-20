@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import struct
 from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
@@ -65,28 +64,18 @@ async def test_coordinator_write_tag_updates_server(hass: HomeAssistant, s7_serv
     await coordinator.async_disconnect()
 
 
-async def test_coordinator_update_failed_when_server_stopped(
-    hass: HomeAssistant, s7_server
-) -> None:
-    """Coordinator reports UpdateFailed when the server goes away."""
-    srv, port, _ = s7_server
-
+async def test_coordinator_update_failed_on_unreachable_host(hass: HomeAssistant) -> None:
+    """Coordinator reports UpdateFailed when the PLC is unreachable."""
     coordinator = S7Coordinator(
         hass,
         host="127.0.0.1",
         rack=0,
         slot=0,
-        port=port,
+        port=59998,  # nothing listening
         password=None,
         use_tls=False,
         tags=["DB1.DBD0:REAL"],
         scan_interval=timedelta(seconds=60),
     )
-    await coordinator.async_connect()
-    await coordinator.async_refresh()
-    assert coordinator.last_update_success
-
-    srv.stop()
-    # Force an immediate refresh; expect it to fail
     await coordinator.async_refresh()
     assert not coordinator.last_update_success

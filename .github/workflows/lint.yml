@@ -14,8 +14,8 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.13"
-      - name: Install dev deps
-        run: uv pip install -e ".[dev]"
+      - name: Install dev dependencies
+        run: uv sync --group dev
       - name: Ruff check
         run: uv run ruff check custom_components tests
       - name: Ruff format
