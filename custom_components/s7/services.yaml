@@ -1,0 +1,25 @@
+write_tag:
+  name: Write tag
+  description: Write a value to a PLC tag using PLC4X-style address syntax.
+  fields:
+    entry_id:
+      name: Config entry
+      description: The config entry ID of the PLC to write to.
+      required: true
+      selector:
+        config_entry:
+          integration: s7
+    tag:
+      name: Tag address
+      description: PLC4X-style tag address, e.g. "DB1.DBD0:REAL" or "M10.5:BOOL".
+      required: true
+      example: "DB1.DBD0:REAL"
+      selector:
+        text:
+    value:
+      name: Value
+      description: The value to write (type must match the tag datatype).
+      required: true
+      example: 42.5
+      selector:
+        text:

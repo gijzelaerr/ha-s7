@@ -1,0 +1,55 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Siemens S7 PLC",
+        "description": "Enter your PLC connection details. For Tags, use PLC4X-style addresses like 'DB1.DBD0:REAL' or 'M10.5:BOOL' separated by commas or newlines.",
+        "data": {
+          "host": "Host",
+          "rack": "Rack",
+          "slot": "Slot",
+          "port": "TCP port",
+          "use_tls": "Use TLS (S7CommPlus V2/V3)",
+          "password": "PLC password (optional)",
+          "tags": "Tags"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the PLC. Check host, port, rack, slot, and tag addresses."
+    },
+    "abort": {
+      "already_configured": "This PLC is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "data": {
+          "scan_interval": "Scan interval (seconds)"
+        }
+      }
+    }
+  },
+  "services": {
+    "write_tag": {
+      "name": "Write tag",
+      "description": "Write a value to a PLC tag.",
+      "fields": {
+        "entry_id": {
+          "name": "Config entry",
+          "description": "The PLC to write to."
+        },
+        "tag": {
+          "name": "Tag",
+          "description": "PLC4X-style address, e.g. DB1.DBD0:REAL."
+        },
+        "value": {
+          "name": "Value",
+          "description": "The value to write."
+        }
+      }
+    }
+  }
+}
