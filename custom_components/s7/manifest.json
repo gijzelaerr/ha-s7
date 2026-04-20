@@ -1,13 +1,13 @@
 {
   "domain": "s7",
   "name": "Siemens S7 PLC",
-  "version": "0.1.0",
-  "documentation": "https://github.com/gijzelaerr/ha-s7",
-  "issue_tracker": "https://github.com/gijzelaerr/ha-s7/issues",
   "codeowners": ["@gijzelaerr"],
   "config_flow": true,
-  "iot_class": "local_polling",
-  "requirements": ["python-snap7>=4.0.0"],
+  "documentation": "https://github.com/gijzelaerr/ha-s7",
   "integration_type": "hub",
-  "loggers": ["s7", "snap7"]
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/gijzelaerr/ha-s7/issues",
+  "loggers": ["s7", "snap7"],
+  "requirements": ["python-snap7>=4.0.0"],
+  "version": "0.1.0"
 }
