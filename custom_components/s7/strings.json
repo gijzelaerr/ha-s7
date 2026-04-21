@@ -51,6 +51,24 @@
           "description": "The value to write."
         }
       }
+    },
+    "pulse_tag": {
+      "name": "Pulse tag",
+      "description": "Write True, wait, write False — for momentary bit commands.",
+      "fields": {
+        "entry_id": {
+          "name": "Config entry",
+          "description": "The PLC to pulse."
+        },
+        "tag": {
+          "name": "Tag",
+          "description": "BOOL tag address (PLC4X or nodeS7 syntax)."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "How long to hold True before resetting, in seconds."
+        }
+      }
     }
   }
 }
