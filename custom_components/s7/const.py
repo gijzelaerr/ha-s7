@@ -21,4 +21,4 @@ DEFAULT_SLOT = 1
 DEFAULT_SCAN_INTERVAL = timedelta(seconds=30)
 
 # Platforms this integration provides
-PLATFORMS = ["sensor", "binary_sensor", "switch", "number"]
+PLATFORMS = ["sensor", "binary_sensor", "switch", "number", "text"]

@@ -1,6 +1,6 @@
 write_tag:
   name: Write tag
-  description: Write a value to a PLC tag using PLC4X-style address syntax.
+  description: Write a value to a PLC tag. Accepts PLC4X (DB1.DBD0:REAL) and nodeS7 (DB1,R0) syntax.
   fields:
     entry_id:
       name: Config entry
@@ -11,7 +11,7 @@ write_tag:
           integration: s7
     tag:
       name: Tag address
-      description: PLC4X-style tag address, e.g. "DB1.DBD0:REAL" or "M10.5:BOOL".
+      description: "PLC4X address (DB1.DBD0:REAL, M10.5:BOOL) or nodeS7 address (DB1,R0, M10.5, IW22)."
       required: true
       example: "DB1.DBD0:REAL"
       selector:
@@ -23,3 +23,34 @@ write_tag:
       example: 42.5
       selector:
         text:
+
+pulse_tag:
+  name: Pulse tag
+  description: Write True, wait, write False — for momentary commands like start/acknowledge/reset bits.
+  fields:
+    entry_id:
+      name: Config entry
+      description: The config entry ID of the PLC to pulse.
+      required: true
+      selector:
+        config_entry:
+          integration: s7
+    tag:
+      name: Tag address
+      description: "BOOL tag to pulse. PLC4X (DB1.DBX0.0:BOOL) or nodeS7 (DB1,X0.0) syntax."
+      required: true
+      example: "DB1.DBX0.0:BOOL"
+      selector:
+        text:
+    duration:
+      name: Pulse duration (seconds)
+      description: How long to hold the bit at True before resetting to False.
+      default: 0.5
+      example: 0.5
+      selector:
+        number:
+          min: 0.05
+          max: 60.0
+          step: 0.05
+          unit_of_measurement: s
+          mode: box

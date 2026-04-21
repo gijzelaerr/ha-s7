@@ -147,15 +147,34 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         await asyncio.sleep(delay)
 
     async def async_write_tag(self, tag_string: str, value: Any) -> None:
-        """Write a value to the tag identified by its configured address string."""
+        """Write a value to the tag identified by its configured address string.
+
+        Accepts both pre-configured tags (looked up from ``parsed_tags``) and
+        arbitrary addresses passed via the ``write_tag`` service. Unknown
+        strings are parsed on the fly via ``parse_tag(strict=False)``.
+        """
         tag = self._parsed_tags.get(tag_string)
-        target: Tag | str = tag if tag is not None else tag_string
+        if tag is None:
+            tag = parse_tag(tag_string, strict=False, name=tag_string)
 
         def _write() -> None:
             if not self._client.connected:
                 self._blocking_connect()
-            self._client.write_tag(target, value)
+            self._client.write_tag(tag, value)
 
         async with self._lock:
             await self.hass.async_add_executor_job(_write)
         await self.async_request_refresh()
+
+    async def async_pulse_tag(self, tag_string: str, duration: float) -> None:
+        """Write True, wait ``duration`` seconds, write False.
+
+        Used for momentary commands where the PLC expects a rising/falling
+        edge (``start`` / ``acknowledge`` / ``reset`` buttons). The sleep is
+        asynchronous so other coordinator work can still run; the
+        client-level lock is released during the wait so reads are not
+        blocked.
+        """
+        await self.async_write_tag(tag_string, True)
+        await asyncio.sleep(duration)
+        await self.async_write_tag(tag_string, False)
