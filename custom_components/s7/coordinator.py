@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import timedelta
+import time
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from homeassistant.core import HomeAssistant
@@ -78,6 +79,11 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._parsed_tags = parse_tags(self._tag_strings)
         self._lock = asyncio.Lock()
         self._connect_failures = 0
+        # Diagnostic metrics
+        self._read_count = 0
+        self._write_count = 0
+        self._last_read_latency: float | None = None
+        self._connected_since: datetime | None = None
 
     @property
     def host(self) -> str:
@@ -92,6 +98,26 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
     def parsed_tags(self) -> dict[str, Tag]:
         """Parsed Tag objects keyed by original input string."""
         return self._parsed_tags
+
+    @property
+    def read_count(self) -> int:
+        """Total successful read cycles since the coordinator was created."""
+        return self._read_count
+
+    @property
+    def write_count(self) -> int:
+        """Total successful write operations since the coordinator was created."""
+        return self._write_count
+
+    @property
+    def last_read_latency(self) -> float | None:
+        """Seconds taken by the most recent read cycle, or None if no cycle yet."""
+        return self._last_read_latency
+
+    @property
+    def connected_since(self) -> datetime | None:
+        """Timestamp of the last successful (re)connect, or None if never connected."""
+        return self._connected_since
 
     async def async_connect(self) -> None:
         """Open the PLC connection (snap7 is blocking; runs in executor)."""
@@ -112,6 +138,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             use_tls=self._use_tls,
             password=self._password,
         )
+        self._connected_since = datetime.now(UTC)
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Read all configured tags via the multi-variable optimizer."""
@@ -125,11 +152,14 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             return dict(zip(self._tag_strings, values, strict=True))
 
         async with self._lock:
+            started = time.monotonic()
             try:
                 result = await self.hass.async_add_executor_job(_read)
             except Exception as err:
                 await self._async_mark_reconnect()
                 raise UpdateFailed(f"Failed to read PLC tags: {err}") from err
+            self._last_read_latency = time.monotonic() - started
+            self._read_count += 1
             self._connect_failures = 0
             return result
 
@@ -164,6 +194,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         async with self._lock:
             await self.hass.async_add_executor_job(_write)
+            self._write_count += 1
         await self.async_request_refresh()
 
     async def async_pulse_tag(self, tag_string: str, duration: float) -> None:
