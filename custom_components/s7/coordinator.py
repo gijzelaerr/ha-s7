@@ -2,18 +2,47 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import timedelta
 from typing import Any
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from snap7.tags import Tag, parse_tag
 
 from s7 import Client
 
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+# snap7's Client is blocking and not thread-safe across concurrent
+# operations, so we serialise all client access with a single asyncio lock.
+# On connection loss we back off before retrying to avoid hot-looping on
+# a PLC that stays down.
+_RECONNECT_BACKOFF_SECONDS = (1.0, 2.0, 5.0, 10.0)
+
+
+def parse_tags(inputs: list[str]) -> dict[str, Tag]:
+    """Parse configured tag strings into Tag objects, keyed by original input.
+
+    Accepts both PLC4X (``DB1.DBD0:REAL``) and nodeS7 (``DB1,R0``) syntax.
+    Bare short forms like ``M7.1`` or ``IW22`` are accepted via
+    ``parse_tag(..., strict=False)``.
+
+    Raises ValueError listing every failed input.
+    """
+    parsed: dict[str, Tag] = {}
+    errors: list[str] = []
+    for raw in inputs:
+        try:
+            parsed[raw] = parse_tag(raw, strict=False, name=raw)
+        except ValueError as err:
+            errors.append(f"{raw!r}: {err}")
+    if errors:
+        raise ValueError("Invalid tag(s): " + "; ".join(errors))
+    return parsed
 
 
 class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
@@ -45,7 +74,10 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._port = port
         self._password = password
         self._use_tls = use_tls
-        self._tags = tags
+        self._tag_strings = list(tags)
+        self._parsed_tags = parse_tags(self._tag_strings)
+        self._lock = asyncio.Lock()
+        self._connect_failures = 0
 
     @property
     def host(self) -> str:
@@ -53,54 +85,77 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     @property
     def tags(self) -> list[str]:
-        return self._tags
+        """Configured tag strings, in config order (used for unique IDs)."""
+        return self._tag_strings
+
+    @property
+    def parsed_tags(self) -> dict[str, Tag]:
+        """Parsed Tag objects keyed by original input string."""
+        return self._parsed_tags
 
     async def async_connect(self) -> None:
-        """Open the PLC connection (run in executor — snap7 is blocking)."""
-
-        def _connect() -> None:
-            self._client.connect(
-                self._host,
-                self._rack,
-                self._slot,
-                self._port,
-                use_tls=self._use_tls,
-                password=self._password,
-            )
-
-        await self.hass.async_add_executor_job(_connect)
+        """Open the PLC connection (snap7 is blocking; runs in executor)."""
+        async with self._lock:
+            await self.hass.async_add_executor_job(self._blocking_connect)
 
     async def async_disconnect(self) -> None:
-        if self._client.connected:
-            await self.hass.async_add_executor_job(self._client.disconnect)
+        async with self._lock:
+            if self._client.connected:
+                await self.hass.async_add_executor_job(self._client.disconnect)
+
+    def _blocking_connect(self) -> None:
+        self._client.connect(
+            self._host,
+            self._rack,
+            self._slot,
+            self._port,
+            use_tls=self._use_tls,
+            password=self._password,
+        )
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Read all configured tags and return a dict keyed by tag string."""
+        """Read all configured tags via the multi-variable optimizer."""
 
         def _read() -> dict[str, Any]:
             if not self._client.connected:
-                self._client.connect(
-                    self._host,
-                    self._rack,
-                    self._slot,
-                    self._port,
-                    use_tls=self._use_tls,
-                    password=self._password,
-                )
-            values = self._client.read_tags(self._tags)
-            return dict(zip(self._tags, values, strict=True))
+                self._blocking_connect()
+            # Passing Tag objects lets the optimizer coalesce adjacent reads.
+            tag_list = list(self._parsed_tags.values())
+            values = self._client.read_tags(tag_list)
+            return dict(zip(self._tag_strings, values, strict=True))
 
+        async with self._lock:
+            try:
+                result = await self.hass.async_add_executor_job(_read)
+            except Exception as err:
+                await self._async_mark_reconnect()
+                raise UpdateFailed(f"Failed to read PLC tags: {err}") from err
+            self._connect_failures = 0
+            return result
+
+    async def _async_mark_reconnect(self) -> None:
+        """Drop the connection so the next cycle reconnects, with bounded backoff."""
         try:
-            return await self.hass.async_add_executor_job(_read)
-        except Exception as err:
-            raise UpdateFailed(f"Failed to read PLC tags: {err}") from err
+            if self._client.connected:
+                await self.hass.async_add_executor_job(self._client.disconnect)
+        except Exception:  # noqa: BLE001
+            pass
+        idx = min(self._connect_failures, len(_RECONNECT_BACKOFF_SECONDS) - 1)
+        delay = _RECONNECT_BACKOFF_SECONDS[idx]
+        self._connect_failures += 1
+        _LOGGER.debug("Reconnect backoff: %ss (failure #%d)", delay, self._connect_failures)
+        await asyncio.sleep(delay)
 
-    async def async_write_tag(self, tag: str, value: Any) -> None:
-        """Write a single tag value to the PLC."""
+    async def async_write_tag(self, tag_string: str, value: Any) -> None:
+        """Write a value to the tag identified by its configured address string."""
+        tag = self._parsed_tags.get(tag_string)
+        target: Tag | str = tag if tag is not None else tag_string
 
         def _write() -> None:
-            self._client.write_tag(tag, value)
+            if not self._client.connected:
+                self._blocking_connect()
+            self._client.write_tag(target, value)
 
-        await self.hass.async_add_executor_job(_write)
-        # Trigger a refresh so entities reflect the new value
+        async with self._lock:
+            await self.hass.async_add_executor_job(_write)
         await self.async_request_refresh()

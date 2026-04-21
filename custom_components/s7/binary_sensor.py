@@ -1,4 +1,4 @@
-"""Binary sensor platform — BOOL tags (read-only)."""
+"""Binary sensor platform — BOOL tags in read-only (input) area."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from snap7.type import Area
 
 from .const import DOMAIN
 from .coordinator import S7Coordinator
@@ -19,11 +20,11 @@ async def async_setup_entry(
 ) -> None:
     coordinator: S7Coordinator = hass.data[DOMAIN][entry.entry_id]
     entities: list[S7BinarySensor] = []
-    for tag in coordinator.tags:
-        # Only BOOL tags from input or output areas (read-only).
-        # Writable BOOLs in DB/M areas become switches instead (see switch.py).
-        if tag.upper().endswith(":BOOL") and (tag.upper().startswith("I") or tag.upper().startswith("%I")):
-            entities.append(S7BinarySensor(coordinator, tag))
+    # Only BOOL tags from the input area (read-only).
+    # Writable BOOLs in DB/M/Q areas become switches instead (see switch.py).
+    for raw, tag in coordinator.parsed_tags.items():
+        if tag.datatype.upper() == "BOOL" and tag.area == Area.PE:
+            entities.append(S7BinarySensor(coordinator, raw))
     async_add_entities(entities)
 
 

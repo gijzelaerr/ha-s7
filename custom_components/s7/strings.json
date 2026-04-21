@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Siemens S7 PLC",
-        "description": "Enter your PLC connection details. For Tags, use PLC4X-style addresses like 'DB1.DBD0:REAL' or 'M10.5:BOOL' separated by commas or newlines.",
+        "description": "Enter your PLC connection details. For Tags, use PLC4X syntax ('DB1.DBD0:REAL', 'M10.5:BOOL') or nodeS7 syntax ('DB1,R0', 'M10.5', 'IW22') — separate multiple tags with newlines or semicolons.",
         "data": {
           "host": "Host",
           "rack": "Rack",
@@ -16,7 +16,8 @@
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to the PLC. Check host, port, rack, slot, and tag addresses."
+      "cannot_connect": "Failed to connect to the PLC. Check host, port, rack, slot, and tag addresses.",
+      "invalid_tags": "One or more tag addresses could not be parsed. Check the syntax."
     },
     "abort": {
       "already_configured": "This PLC is already configured."
@@ -43,7 +44,7 @@
         },
         "tag": {
           "name": "Tag",
-          "description": "PLC4X-style address, e.g. DB1.DBD0:REAL."
+          "description": "PLC4X address (DB1.DBD0:REAL) or nodeS7 address (DB1,R0)."
         },
         "value": {
           "name": "Value",
