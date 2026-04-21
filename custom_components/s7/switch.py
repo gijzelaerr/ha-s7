@@ -8,10 +8,13 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from snap7.type import Area
 
 from .const import DOMAIN
 from .coordinator import S7Coordinator
 from .entity import S7BaseEntity
+
+_WRITABLE_BOOL_AREAS = {Area.DB, Area.MK, Area.PA}
 
 
 async def async_setup_entry(
@@ -21,13 +24,9 @@ async def async_setup_entry(
 ) -> None:
     coordinator: S7Coordinator = hass.data[DOMAIN][entry.entry_id]
     entities: list[S7Switch] = []
-    for tag in coordinator.tags:
-        upper = tag.upper().lstrip("%")
-        if not upper.endswith(":BOOL"):
-            continue
-        # Writable areas: DB, M (Merker), Q (Output)
-        if upper.startswith("DB") or upper.startswith("M") or upper.startswith("Q"):
-            entities.append(S7Switch(coordinator, tag))
+    for raw, tag in coordinator.parsed_tags.items():
+        if tag.datatype.upper() == "BOOL" and tag.area in _WRITABLE_BOOL_AREAS:
+            entities.append(S7Switch(coordinator, raw))
     async_add_entities(entities)
 
 

@@ -43,15 +43,10 @@ _SENSOR_TYPES = {
 }
 
 
-def _tag_datatype(tag: str) -> str:
-    """Extract the type portion from a tag address string."""
-    if ":" not in tag:
-        return ""
-    dt = tag.rsplit(":", 1)[-1].upper()
-    # Strip array/string length: INT[5] -> INT, STRING[20] -> STRING
-    if "[" in dt:
-        dt = dt.split("[", 1)[0]
-    return dt
+def _base_type(datatype: str) -> str:
+    """Strip ``STRING[20]`` / ``REAL[5]`` down to base ``STRING`` / ``REAL``."""
+    dt = datatype.upper()
+    return dt.split("[", 1)[0] if "[" in dt else dt
 
 
 async def async_setup_entry(
@@ -61,9 +56,9 @@ async def async_setup_entry(
 ) -> None:
     coordinator: S7Coordinator = hass.data[DOMAIN][entry.entry_id]
     entities: list[S7Sensor] = []
-    for tag in coordinator.tags:
-        if _tag_datatype(tag) in _SENSOR_TYPES:
-            entities.append(S7Sensor(coordinator, tag))
+    for raw, tag in coordinator.parsed_tags.items():
+        if _base_type(tag.datatype) in _SENSOR_TYPES:
+            entities.append(S7Sensor(coordinator, raw))
     async_add_entities(entities)
 
 

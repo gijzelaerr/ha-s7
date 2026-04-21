@@ -6,6 +6,7 @@ from homeassistant.components.number import NumberEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from snap7.type import Area
 
 from .const import DOMAIN
 from .coordinator import S7Coordinator
@@ -47,14 +48,7 @@ _RANGES: dict[str, tuple[float, float]] = {
     "LREAL": (-1.7e308, 1.7e308),
 }
 
-
-def _tag_datatype(tag: str) -> str:
-    if ":" not in tag:
-        return ""
-    dt = tag.rsplit(":", 1)[-1].upper()
-    if "[" in dt:
-        dt = dt.split("[", 1)[0]
-    return dt
+_WRITABLE_AREAS = {Area.DB, Area.MK, Area.PA}
 
 
 async def async_setup_entry(
@@ -64,11 +58,10 @@ async def async_setup_entry(
 ) -> None:
     coordinator: S7Coordinator = hass.data[DOMAIN][entry.entry_id]
     entities: list[S7Number] = []
-    for tag in coordinator.tags:
-        dt = _tag_datatype(tag)
-        upper = tag.upper().lstrip("%")
-        if dt in _NUMBER_TYPES and (upper.startswith("DB") or upper.startswith("M") or upper.startswith("Q")):
-            entities.append(S7Number(coordinator, tag, dt))
+    for raw, tag in coordinator.parsed_tags.items():
+        dt = tag.datatype.upper()
+        if dt in _NUMBER_TYPES and tag.area in _WRITABLE_AREAS:
+            entities.append(S7Number(coordinator, raw, dt))
     async_add_entities(entities)
 
 

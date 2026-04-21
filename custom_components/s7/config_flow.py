@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import voluptuous as vol
@@ -24,6 +25,7 @@ from .const import (
     DEFAULT_SLOT,
     DOMAIN,
 )
+from .coordinator import parse_tags as _parse_tags_for_validation
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,19 +53,26 @@ class S7ConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input[CONF_HOST]
             tags_raw: str = user_input.get(CONF_TAGS, "") or ""
-            tags = [t.strip() for t in tags_raw.replace("\n", ",").split(",") if t.strip()]
+            # Split on newlines or semicolons so nodeS7 addresses (which
+            # contain commas like ``DB1,R0``) stay intact.
+            tags = [t.strip() for t in re.split(r"[\n;]", tags_raw) if t.strip()]
 
-            # Validate connection by attempting a connect in executor
-            valid = await self._test_connection(user_input, tags)
-            if not valid:
-                errors["base"] = "cannot_connect"
+            try:
+                _parse_tags_for_validation(tags)
+            except ValueError as err:
+                errors["base"] = "invalid_tags"
+                _LOGGER.warning("Tag validation failed: %s", err)
             else:
-                await self.async_set_unique_id(f"{host}:{user_input[CONF_PORT]}")
-                self._abort_if_unique_id_configured()
+                valid = await self._test_connection(user_input, tags)
+                if not valid:
+                    errors["base"] = "cannot_connect"
+                else:
+                    await self.async_set_unique_id(f"{host}:{user_input[CONF_PORT]}")
+                    self._abort_if_unique_id_configured()
 
-                data = dict(user_input)
-                data[CONF_TAGS] = tags
-                return self.async_create_entry(title=f"S7 {host}", data=data)
+                    data = dict(user_input)
+                    data[CONF_TAGS] = tags
+                    return self.async_create_entry(title=f"S7 {host}", data=data)
 
         return self.async_show_form(
             step_id="user",
@@ -74,6 +83,10 @@ class S7ConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _test_connection(self, user_input: dict[str, Any], tags: list[str]) -> bool:
         """Attempt a throwaway connection to the PLC."""
         from s7 import Client
+
+        # Tags were already validated via _parse_tags_for_validation; reuse
+        # that output so read_tags() sees Tag objects (supports nodeS7).
+        parsed = _parse_tags_for_validation(tags) if tags else {}
 
         def _try() -> bool:
             client = Client()
@@ -86,8 +99,8 @@ class S7ConfigFlow(ConfigFlow, domain=DOMAIN):
                     use_tls=user_input.get(CONF_USE_TLS, False),
                     password=user_input.get(CONF_PASSWORD),
                 )
-                if tags:
-                    client.read_tags(tags)
+                if parsed:
+                    client.read_tags(list(parsed.values()))
                 client.disconnect()
                 return True
             except Exception as err:

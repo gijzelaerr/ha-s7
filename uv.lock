@@ -2957,7 +2957,7 @@ wheels = [
 [[package]]
 name = "python-snap7"
 version = "3.0.0"
-source = { git = "https://github.com/gijzelaerr/python-snap7.git?rev=master#e6098372b994c85c0870429fbaef42a4cdcd05da" }
+source = { git = "https://github.com/gijzelaerr/python-snap7.git?rev=master#7358d203b9d6a47089171e0046387c6ab333e3fa" }
 
 [[package]]
 name = "pyturbojpeg"
