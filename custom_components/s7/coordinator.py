@@ -13,8 +13,9 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from snap7.tags import Tag, parse_tag
 
 from s7 import Client
+from s7._protocol import Protocol
 
-from .const import DOMAIN
+from .const import DEFAULT_PROTOCOL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,6 +62,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         use_tls: bool,
         tags: list[str],
         scan_interval: timedelta,
+        protocol: str = DEFAULT_PROTOCOL,
     ) -> None:
         super().__init__(
             hass,
@@ -75,6 +77,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._port = port
         self._password = password
         self._use_tls = use_tls
+        self._protocol = Protocol[protocol]
         self._tag_strings = list(tags)
         self._parsed_tags = parse_tags(self._tag_strings)
         self._lock = asyncio.Lock()
@@ -135,6 +138,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._rack,
             self._slot,
             self._port,
+            protocol=self._protocol,
             use_tls=self._use_tls,
             password=self._password,
         )
