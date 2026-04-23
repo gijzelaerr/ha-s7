@@ -146,3 +146,35 @@ async def test_parsed_tags_exposes_dialect_subtypes(hass: HomeAssistant) -> None
     parsed = coordinator.parsed_tags
     assert isinstance(parsed["DB1.DBD0:REAL"], PLC4XTag)
     assert isinstance(parsed["DB1,R8"], NodeS7Tag)
+
+
+async def test_coordinator_legacy_protocol_skips_commplus_probe(hass: HomeAssistant, s7_server) -> None:
+    """protocol='LEGACY' tells the unified client to skip the CommPlus probe.
+
+    The emulator only speaks legacy; with the default AUTO setting the
+    client probes S7CommPlus first (logs 'S7CommPlus not available') and
+    then falls back. Forcing LEGACY should connect straight away and
+    still read the same values.
+    """
+    _srv, port, _ = s7_server
+
+    coordinator = S7Coordinator(
+        hass,
+        host="127.0.0.1",
+        rack=0,
+        slot=0,
+        port=port,
+        password=None,
+        use_tls=False,
+        tags=["DB1.DBD0:REAL"],
+        scan_interval=timedelta(seconds=60),
+        protocol="LEGACY",
+    )
+    await coordinator.async_connect()
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert coordinator.last_update_success
+    assert abs(coordinator.data["DB1.DBD0:REAL"] - 23.5) < 0.01
+
+    await coordinator.async_disconnect()

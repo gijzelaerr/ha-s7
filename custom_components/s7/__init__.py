@@ -12,12 +12,14 @@ from .const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
+    CONF_PROTOCOL,
     CONF_RACK,
     CONF_SCAN_INTERVAL,
     CONF_SLOT,
     CONF_TAGS,
     CONF_USE_TLS,
     DEFAULT_PORT,
+    DEFAULT_PROTOCOL,
     DEFAULT_RACK,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SLOT,
@@ -48,6 +50,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         use_tls=data.get(CONF_USE_TLS, False),
         tags=data.get(CONF_TAGS, []),
         scan_interval=scan_interval,
+        protocol=data.get(CONF_PROTOCOL, DEFAULT_PROTOCOL),
     )
 
     await coordinator.async_connect()

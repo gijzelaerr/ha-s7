@@ -9,6 +9,7 @@
           "rack": "Rack",
           "slot": "Slot",
           "port": "TCP port",
+          "protocol": "Protocol (AUTO = probe S7CommPlus then fall back to legacy; LEGACY for S7-300/400; S7COMMPLUS forces modern)",
           "use_tls": "Use TLS (S7CommPlus V2/V3)",
           "password": "PLC password (optional)",
           "tags": "Tags"
