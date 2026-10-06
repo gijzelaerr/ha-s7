@@ -18,39 +18,37 @@ Two wire protocols are supported, both pure Python with no native dependencies:
 
 - **S7-300/400/1200/1500** — classic S7 or S7CommPlus, no native libraries needed
 - **Industry-standard addressing** — PLC4X / Siemens STEP7 syntax (`DB1.DBD0:REAL`, `M10.5:BOOL`, `I0.0:BOOL`)
-- **Five entity platforms** automatically mapped by tag datatype + area:
-  | Tag area | Datatype | Platform |
+- **Entities chosen automatically** from each tag's area and datatype:
+  | Tag area | Datatype | Entities |
   |---|---|---|
   | `I` (input) | `BOOL` | `binary_sensor` |
-  | `DB`, `M`, `Q` | `BOOL` | `switch` |
-  | `DB`, `M`, `Q` | numeric | `number` (writable) |
-  | `DB`, `M`, `Q` | `STRING` | `text` (writable) |
-  | any | numeric, `DATE`, … | `sensor` |
-- **All S7 types** — `BOOL`, `BYTE`/`SINT`/`USINT`, `INT`/`UINT`/`WORD`, `DINT`/`UDINT`/`DWORD`, `REAL`, `LREAL`, `LINT`/`ULINT`, `STRING[n]`, `WSTRING[n]`, `DATE`, `TIME`, `TOD`, `DT`, `DTL`, `LDT`, `LTIME`, `LTOD`, and arrays
+  | `DB`, `M`, `Q` | `BOOL` | `switch` (writable) |
+  | `DB`, `M`, `Q` | numeric | `sensor` + `number` (writable) |
+  | `DB`, `M`, `Q` | `STRING`, `WSTRING` | `sensor` + `text` (writable) |
+  | `I`, or any area | numeric, `DATE`, `TIME`, … | `sensor` (read-only) |
+- **All S7 types** — `BOOL`, `BYTE`/`SINT`/`USINT`, `INT`/`UINT`/`WORD`, `DINT`/`UDINT`/`DWORD`, `REAL`, `LREAL`, `LINT`/`ULINT`, `STRING[n]`, `WSTRING[n]`, `DATE`, `TIME`, `TOD`, `DT`, `DTL`, `LDT`, `LTIME`, `LTOD`
 - **Batched reads** — one multi-variable request per poll on both protocols
 - **TLS + password authentication** — S7CommPlus V2/V3 on S7-1200/1500
-- **Diagnostic sensors** — read/write counters, read latency and connected-since per PLC
+- **Diagnostic sensors** — read/write counters, read latency and connected-since per PLC (disabled by default; enable them on the device page)
 - **`write_tag` and `pulse_tag` services** for automations
 
 ## Installation
 
 ### HACS (recommended)
 
-1. In HACS, **Settings → Custom repositories**, add `https://github.com/gijzelaerr/ha-s7` with category **Integration**.
-2. Install **Siemens S7 PLC**.
-3. Restart Home Assistant.
-4. **Settings → Devices & Services → Add Integration** → search for *Siemens S7 PLC*.
+This repository is not in the default HACS list yet, so add it as a custom repository:
+
+1. In HACS, open the menu (⋮) → **Custom repositories**.
+2. Add `https://github.com/gijzelaerr/ha-s7` with category **Integration**.
+3. Search for **Siemens S7 PLC** and download it.
+4. Restart Home Assistant.
+5. **Settings → Devices & Services → Add Integration** → *Siemens S7 PLC*.
+
+Home Assistant installs the required Python packages (`python-snap7`, `s7commplus`) itself on the first start.
 
 ### Manual
 
-```bash
-cd ~/.homeassistant/custom_components
-git clone https://github.com/gijzelaerr/ha-s7.git tmp
-mv tmp/custom_components/s7 s7
-rm -rf tmp
-```
-
-Restart Home Assistant.
+Download the latest release from the [releases page](https://github.com/gijzelaerr/ha-s7/releases) and copy the `custom_components/s7` folder into your Home Assistant configuration directory, so that you end up with `<config>/custom_components/s7/manifest.json`. Restart Home Assistant, then add the integration as above.
 
 ## Configuration
 
@@ -72,8 +70,8 @@ Rack and slot are only used by the legacy protocol.
 ### Choosing a protocol
 
 - **S7-300/400**: use `legacy`.
-- **S7-1200/1500 with PUT/GET enabled** (TIA Portal → CPU properties → Protection & Security → "Permit access with PUT/GET"): `legacy` works and is the most widely tested.
-- **S7-1200/1500 with PUT/GET disabled**: use `s7commplus`, with TLS and the PLC password on newer firmware.
+- **S7-1200/1500 with PUT/GET enabled** (TIA Portal → CPU properties → Protection & security → Connection mechanisms → "Permit access with PUT/GET communication from remote partner"): `legacy` works and is the best-tested path.
+- **S7-1200/1500 with PUT/GET disabled**: use `s7commplus`, enable TLS and enter the PLC password where the firmware requires it. S7CommPlus support is new and has so far only been tested against an emulator, so please report problems.
 
 On S7-1200/1500, tags are addressed by absolute byte offset, so each data block you read must have **"Optimized block access" turned off**. Symbolic access to optimized blocks is not supported yet.
 
@@ -89,19 +87,21 @@ M10.5:BOOL
 I0.0:BOOL
 Q0.0:BOOL
 DB1:10:STRING[20]
-DB2.DBD0:REAL[5]
+DB1,R8
 ```
 
-See [python-snap7's tag docs](https://python-snap7.readthedocs.io/en/latest/API/tags.html) for the full syntax.
+See [python-snap7's tag docs](https://python-snap7.readthedocs.io/en/latest/API/tags.html) for the full address syntax.
 
 ## Services
+
+Both services take the `entry_id` of the PLC's config entry (a long ID string, found in `.storage/core.config_entries` in your configuration directory). `tag` accepts any PLC4X or nodeS7 address, whether or not it is configured as an entity.
 
 ### `s7.write_tag`
 
 ```yaml
 service: s7.write_tag
 data:
-  entry_id: !config_entry_id
+  entry_id: "<config entry id>"
   tag: "DB1.DBW6:INT"
   value: 1500
 ```
@@ -113,7 +113,7 @@ Writes `True`, waits, then writes `False` — for momentary commands such as sta
 ```yaml
 service: s7.pulse_tag
 data:
-  entry_id: !config_entry_id
+  entry_id: "<config entry id>"
   tag: "M10.0:BOOL"
   duration: 0.5
 ```
