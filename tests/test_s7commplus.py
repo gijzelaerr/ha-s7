@@ -69,6 +69,7 @@ async def test_commplus_write_tag(hass: HomeAssistant, s7commplus_server) -> Non
     assert data["DB2.DBX0.0:BOOL"] is True
     assert srv.get_db(2).data[0] == 0b0000_0101
 
+    await coordinator.async_shutdown()
     await coordinator.async_disconnect()
 
 

@@ -8,10 +8,13 @@
 [project]
 name = "ha-s7-dev"
 version = "0"
-requires-python = ">=3.13,<3.14"
+requires-python = ">=3.14.2,<3.15"
 
 [tool.uv]
 package = false
+# Dev-only: Home Assistant pins these exactly, but the pinned versions have
+# open security advisories.
+override-dependencies = ["pyjwt>=2.15.0", "cryptography>=50.0.0"]
 
 [dependency-groups]
 # PEP 735 dependency group — installs dev tools without requiring the
@@ -23,7 +26,8 @@ dev = [
     "homeassistant>=2024.12.0",
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
-    "pytest-homeassistant-custom-component>=0.13.170",
+    # 0.13.368+ pins the Home Assistant 2026.10 beta; stay on stable until it ships.
+    "pytest-homeassistant-custom-component>=0.13.170,<0.13.368",
     "ruff>=0.16.10",
     "mypy>=2.4.0",
     "pre-commit>=4.6.2",
@@ -31,14 +35,14 @@ dev = [
 
 [tool.ruff]
 line-length = 130
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]
 ignore = ["E501"]  # line length handled by formatter
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 # HA integrations are typically not mypy-strict — the HA ecosystem uses
 # dynamic imports extensively, and strict-mode compliance across all HA
 # APIs is not practical for third-party integrations.

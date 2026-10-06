@@ -61,6 +61,7 @@ async def test_coordinator_write_tag_updates_server(hass: HomeAssistant, s7_serv
     assert coordinator.data is not None
     assert abs(coordinator.data["DB2.DBD0:REAL"] - 99.9) < 0.01
 
+    await coordinator.async_shutdown()
     await coordinator.async_disconnect()
 
 
