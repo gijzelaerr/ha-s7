@@ -18,8 +18,8 @@ package = false
 # project itself to be installed as a package (which conflicts with HA's
 # custom_components loader).
 dev = [
-    # python-snap7 4.0 is unreleased; install from master for now.
-    "python-snap7 @ git+https://github.com/gijzelaerr/python-snap7.git@master",
+    "python-snap7>=3.2.1",
+    "s7commplus>=0.1.0",
     "homeassistant>=2024.12.0",
     "pytest>=8.0",
     "pytest-asyncio>=0.23",

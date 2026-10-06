@@ -13,6 +13,7 @@ from collections.abc import Generator
 from ctypes import c_char
 
 import pytest
+from s7commplus import Server as CommPlusServer
 from snap7.server import Server as LegacyServer
 from snap7.type import SrvArea
 
@@ -59,3 +60,24 @@ def s7_server() -> Generator[tuple[LegacyServer, int, bytearray]]:
 
     server.stop()
     server.destroy()
+
+
+@pytest.fixture
+def s7commplus_server() -> Generator[tuple[CommPlusServer, int]]:
+    """Start an S7CommPlus emulator with DB1 test data and a writable DB2."""
+    server = CommPlusServer()
+
+    db1 = bytearray(100)
+    struct.pack_into(">f", db1, 0, 23.5)  # DB1.DBD0 = 23.5 (REAL)
+    struct.pack_into(">h", db1, 4, 42)  # DB1.DBW4 = 42 (INT)
+    db1[6] = 0x01  # DB1.DBX6.0 = 1 (BOOL)
+    server.register_raw_db(1, db1)
+    server.register_raw_db(2, bytearray(100))
+
+    port = random.randint(30001, 40000)
+    server.start(host="127.0.0.1", port=port)
+    time.sleep(0.2)
+
+    yield server, port
+
+    server.stop()

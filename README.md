@@ -5,47 +5,50 @@
 [![Test](https://github.com/gijzelaerr/ha-s7/actions/workflows/test.yml/badge.svg)](https://github.com/gijzelaerr/ha-s7/actions/workflows/test.yml)
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
-Read and write any tag on a Siemens S7 PLC (S7-300, S7-400, S7-1200, S7-1500, Logo) as Home Assistant sensors, binary_sensors, switches, and numbers.
+Read and write tags on a Siemens S7 PLC (S7-300, S7-400, S7-1200, S7-1500) as Home Assistant sensors, binary sensors, switches, numbers and text entities.
 
-Built on [python-snap7](https://github.com/gijzelaerr/python-snap7) 4.0's unified `s7` package — pure Python, no native dependencies, automatic protocol detection (S7CommPlus for modern PLCs, classic S7 otherwise), TLS support for S7-1200/1500 V2/V3.
+Two wire protocols are supported, both pure Python with no native dependencies:
+
+- **Legacy S7 (PUT/GET)** via [python-snap7](https://github.com/gijzelaerr/python-snap7) — S7-300/400, and S7-1200/1500 with PUT/GET access enabled.
+- **S7CommPlus** via [s7commplus](https://github.com/gijzelaerr/s7commplus) — S7-1200/1500 where PUT/GET is disabled (V1, V2 with TLS, V3).
 
 ---
 
 ## Features
 
-- **Any S7 PLC** — works with S7-300/400/1200/1500 and Logo, no native libraries needed
+- **S7-300/400/1200/1500** — classic S7 or S7CommPlus, no native libraries needed
 - **Industry-standard addressing** — PLC4X / Siemens STEP7 syntax (`DB1.DBD0:REAL`, `M10.5:BOOL`, `I0.0:BOOL`)
-- **Four entity platforms** automatically mapped by tag datatype + area:
-  | Tag area | Datatype | Platform |
+- **Entities chosen automatically** from each tag's area and datatype:
+  | Tag area | Datatype | Entities |
   |---|---|---|
   | `I` (input) | `BOOL` | `binary_sensor` |
-  | `DB`, `M`, `Q` | `BOOL` | `switch` |
-  | `DB`, `M`, `Q` | numeric | `number` (writable) |
-  | any | numeric, `STRING`, `DATE`, … | `sensor` |
-- **All S7 types** — `BOOL`, `BYTE`/`SINT`/`USINT`, `INT`/`UINT`/`WORD`, `DINT`/`UDINT`/`DWORD`, `REAL`, `LREAL`, `LINT`/`ULINT`, `STRING[n]`, `WSTRING[n]`, `DATE`, `TIME`, `TOD`, `DT`, `DTL`, `LDT`, `LTIME`, `LTOD`, and arrays
-- **Batched reads** — uses python-snap7's multi-variable read optimizer to minimize PDU round-trips
-- **TLS + password authentication** — for S7-1200/1500 V2/V3
-- **`write_tag` service** for automations
+  | `DB`, `M`, `Q` | `BOOL` | `switch` (writable) |
+  | `DB`, `M`, `Q` | numeric | `sensor` + `number` (writable) |
+  | `DB`, `M`, `Q` | `STRING`, `WSTRING` | `sensor` + `text` (writable) |
+  | `I`, or any area | numeric, `DATE`, `TIME`, … | `sensor` (read-only) |
+- **All S7 types** — `BOOL`, `BYTE`/`SINT`/`USINT`, `INT`/`UINT`/`WORD`, `DINT`/`UDINT`/`DWORD`, `REAL`, `LREAL`, `LINT`/`ULINT`, `STRING[n]`, `WSTRING[n]`, `DATE`, `TIME`, `TOD`, `DT`, `DTL`, `LDT`, `LTIME`, `LTOD`
+- **Batched reads** — one multi-variable request per poll on both protocols
+- **TLS + password authentication** — S7CommPlus V2/V3 on S7-1200/1500
+- **Diagnostic sensors** — read/write counters, read latency and connected-since per PLC (disabled by default; enable them on the device page)
+- **`write_tag` and `pulse_tag` services** for automations
 
 ## Installation
 
 ### HACS (recommended)
 
-1. In HACS, **Settings → Custom repositories**, add `https://github.com/gijzelaerr/ha-s7` with category **Integration**.
-2. Install **Siemens S7 PLC**.
-3. Restart Home Assistant.
-4. **Settings → Devices & Services → Add Integration** → search for *Siemens S7 PLC*.
+This repository is not in the default HACS list yet, so add it as a custom repository:
+
+1. In HACS, open the menu (⋮) → **Custom repositories**.
+2. Add `https://github.com/gijzelaerr/ha-s7` with category **Integration**.
+3. Search for **Siemens S7 PLC** and download it.
+4. Restart Home Assistant.
+5. **Settings → Devices & Services → Add Integration** → *Siemens S7 PLC*.
+
+Home Assistant installs the required Python packages (`python-snap7`, `s7commplus`) itself on the first start.
 
 ### Manual
 
-```bash
-cd ~/.homeassistant/custom_components
-git clone https://github.com/gijzelaerr/ha-s7.git tmp
-mv tmp/custom_components/s7 s7
-rm -rf tmp
-```
-
-Restart Home Assistant.
+Download the latest release from the [releases page](https://github.com/gijzelaerr/ha-s7/releases) and copy the `custom_components/s7` folder into your Home Assistant configuration directory, so that you end up with `<config>/custom_components/s7/manifest.json`. Restart Home Assistant, then add the integration as above.
 
 ## Configuration
 
@@ -57,9 +60,20 @@ The integration is configured entirely through the HA UI. During setup:
 | Rack | Rack number (usually 0 for S7-1200/1500) | `0` |
 | Slot | Slot number (usually 1 for S7-1200/1500) | `1` |
 | TCP port | S7 port | `102` |
-| Use TLS | Required for S7-1200 FW ≥ 4.3 / S7-1500 FW ≥ 2.9 | off |
-| Password | PLC legitimation password (TLS only) | — |
-| Tags | Comma- or newline-separated PLC4X-style addresses | — |
+| Protocol | `legacy` (classic S7 / PUT/GET) or `s7commplus` (S7-1200/1500) | `legacy` |
+| Use TLS | S7CommPlus V2/V3 only (S7-1200 FW ≥ 4.3 / S7-1500 FW ≥ 2.9) | off |
+| Password | PLC legitimation password (S7CommPlus only) | — |
+| Tags | Newline- or semicolon-separated PLC4X or nodeS7 addresses | — |
+
+Rack and slot are only used by the legacy protocol.
+
+### Choosing a protocol
+
+- **S7-300/400**: use `legacy`.
+- **S7-1200/1500 with PUT/GET enabled** (TIA Portal → CPU properties → Protection & security → Connection mechanisms → "Permit access with PUT/GET communication from remote partner"): `legacy` works and is the best-tested path.
+- **S7-1200/1500 with PUT/GET disabled**: use `s7commplus`, enable TLS and enter the PLC password where the firmware requires it. S7CommPlus support is new and has so far only been tested against an emulator, so please report problems.
+
+On S7-1200/1500, tags are addressed by absolute byte offset, so each data block you read must have **"Optimized block access" turned off**. Symbolic access to optimized blocks is not supported yet.
 
 **Scan interval** is configurable via the integration's *Options* menu (default 30 s).
 
@@ -73,41 +87,54 @@ M10.5:BOOL
 I0.0:BOOL
 Q0.0:BOOL
 DB1:10:STRING[20]
-DB2.DBD0:REAL[5]
+DB1,R8
 ```
 
-See [python-snap7's tag docs](https://python-snap7.readthedocs.io/en/latest/API/tags.html) for the full syntax.
+See [python-snap7's tag docs](https://python-snap7.readthedocs.io/en/latest/API/tags.html) for the full address syntax.
 
 ## Services
+
+Both services take the `entry_id` of the PLC's config entry (a long ID string, found in `.storage/core.config_entries` in your configuration directory). `tag` accepts any PLC4X or nodeS7 address, whether or not it is configured as an entity.
 
 ### `s7.write_tag`
 
 ```yaml
 service: s7.write_tag
 data:
-  entry_id: !config_entry_id
+  entry_id: "<config entry id>"
   tag: "DB1.DBW6:INT"
   value: 1500
+```
+
+### `s7.pulse_tag`
+
+Writes `True`, waits, then writes `False` — for momentary commands such as start or acknowledge.
+
+```yaml
+service: s7.pulse_tag
+data:
+  entry_id: "<config entry id>"
+  tag: "M10.0:BOOL"
+  duration: 0.5
 ```
 
 ## Requirements
 
 - Home Assistant ≥ 2024.12
 - Python ≥ 3.13
-- python-snap7 ≥ 4.0 (released to PyPI once 4.0 ships; until then `ha-s7` is developed against master)
-- On the PLC: PUT/GET enabled **or** an S7-1200/1500 supporting S7CommPlus
+- python-snap7 ≥ 3.2.1 and s7commplus ≥ 0.1.0 (installed automatically by Home Assistant)
 
 ## Development
 
 ```bash
 git clone https://github.com/gijzelaerr/ha-s7
 cd ha-s7
-uv pip install -e ".[dev]"
-pre-commit install
-pytest
+uv sync --group dev
+uv run pre-commit install
+uv run pytest
 ```
 
-Tests spin up python-snap7's built-in S7 server emulator and exercise the full config-flow → coordinator → entity platform chain. No physical PLC required.
+The tests spin up the python-snap7 and s7commplus server emulators and exercise the full config flow → coordinator → entity chain. No physical PLC is required. The Home Assistant test harness only runs on Linux/macOS; on Windows use WSL.
 
 ## License
 
