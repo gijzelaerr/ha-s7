@@ -6,7 +6,7 @@ from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
 
-from custom_components.s7.coordinator import S7Coordinator
+from custom_components.s7.coordinator import S7Coordinator, parse_tags
 
 
 async def test_coordinator_reads_tags(hass: HomeAssistant, s7_server) -> None:
@@ -147,3 +147,11 @@ async def test_parsed_tags_exposes_dialect_subtypes(hass: HomeAssistant) -> None
     parsed = coordinator.parsed_tags
     assert isinstance(parsed["DB1.DBD0:REAL"], PLC4XTag)
     assert isinstance(parsed["DB1,R8"], NodeS7Tag)
+
+
+def test_parse_tags_rejects_arrays() -> None:
+    """Array tags have no entity mapping, so they fail validation up front."""
+    import pytest
+
+    with pytest.raises(ValueError, match="array tags are not supported"):
+        parse_tags(["DB1.DBD0:REAL[5]"])

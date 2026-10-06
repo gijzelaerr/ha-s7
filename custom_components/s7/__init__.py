@@ -7,6 +7,7 @@ from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 
 from .const import (
     CONF_HOST,
@@ -48,7 +49,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         port=data.get(CONF_PORT, DEFAULT_PORT),
         password=data.get(CONF_PASSWORD),
         use_tls=data.get(CONF_USE_TLS, False),
-        tags=data.get(CONF_TAGS, []),
+        tags=options.get(CONF_TAGS, data.get(CONF_TAGS, [])),
         scan_interval=scan_interval,
         protocol=data.get(CONF_PROTOCOL, DEFAULT_PROTOCOL),
     )
@@ -58,11 +59,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
+    _async_remove_stale_entities(hass, entry, coordinator)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_setup_services(hass)
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     return True
+
+
+def _async_remove_stale_entities(hass: HomeAssistant, entry: ConfigEntry, coordinator: S7Coordinator) -> None:
+    """Drop registry entries for tags that were removed from the configuration."""
+    registry = er.async_get(hass)
+    keep = {f"{coordinator.host}_{tag}" for tag in coordinator.tags}
+    diagnostic_prefix = f"{coordinator.host}_diag_"
+    for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if entity.unique_id not in keep and not entity.unique_id.startswith(diagnostic_prefix):
+            registry.async_remove(entity.entity_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
