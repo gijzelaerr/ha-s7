@@ -9,5 +9,5 @@
   "issue_tracker": "https://github.com/gijzelaerr/ha-s7/issues",
   "loggers": ["s7", "snap7"],
   "requirements": ["python-snap7>=3.2.1", "s7commplus>=0.1.0"],
-  "version": "0.1.0"
+  "version": "0.1.1"
 }

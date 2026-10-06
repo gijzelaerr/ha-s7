@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-06
+
 ### Added
 - Edit the tag list (not just the scan interval) from the integration's options dialog; entities of removed tags are cleaned up.
 - The connection error now hints at PUT/GET and "Optimized block access".
@@ -35,5 +37,6 @@ First release.
 - S7CommPlus has only been tested against an emulator, not a physical PLC. TLS and password authentication, and the M/I/Q areas over S7CommPlus, are untested.
 - Tags use absolute byte-offset addressing. On S7-1200/1500, data blocks must have "Optimized block access" turned off; symbolic access to optimized blocks is not implemented.
 
-[Unreleased]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/gijzelaerr/ha-s7/releases/tag/v0.1.0
