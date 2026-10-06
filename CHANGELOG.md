@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Edit the tag list (not just the scan interval) from the integration's options dialog; entities of removed tags are cleaned up.
+- The connection error now hints at PUT/GET and "Optimized block access".
+
+### Changed
+- Array tags (for example `REAL[5]`) are rejected during validation instead of producing broken entities.
+- Development environment moved to Python 3.14 and the dev lockfile updated to patched dependency versions.
+
 ## [0.1.0] - 2026-10-06
 
 First release.
@@ -24,6 +34,6 @@ First release.
 ### Known limitations
 - S7CommPlus has only been tested against an emulator, not a physical PLC. TLS and password authentication, and the M/I/Q areas over S7CommPlus, are untested.
 - Tags use absolute byte-offset addressing. On S7-1200/1500, data blocks must have "Optimized block access" turned off; symbolic access to optimized blocks is not implemented.
-- Array tags (for example `REAL[5]`) parse, but are not tested and have no dedicated entity support.
 
+[Unreleased]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/gijzelaerr/ha-s7/releases/tag/v0.1.0

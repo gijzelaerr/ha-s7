@@ -47,6 +47,14 @@ STEP_USER_SCHEMA = vol.Schema(
 )
 
 
+def split_tags(raw: str) -> list[str]:
+    """Split a tag list on newlines or semicolons.
+
+    Commas are not separators: nodeS7 addresses (``DB1,R0``) contain them.
+    """
+    return [t.strip() for t in re.split(r"[\n;]", raw) if t.strip()]
+
+
 class S7ConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Siemens S7 PLC."""
 
@@ -58,9 +66,7 @@ class S7ConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input[CONF_HOST]
             tags_raw: str = user_input.get(CONF_TAGS, "") or ""
-            # Split on newlines or semicolons so nodeS7 addresses (which
-            # contain commas like ``DB1,R0``) stay intact.
-            tags = [t.strip() for t in re.split(r"[\n;]", tags_raw) if t.strip()]
+            tags = split_tags(tags_raw)
 
             try:
                 _parse_tags_for_validation(tags)
@@ -120,19 +126,34 @@ class S7ConfigFlow(ConfigFlow, domain=DOMAIN):
 
 
 class S7OptionsFlow(OptionsFlow):
-    """Handle options (e.g., scan interval)."""
+    """Edit the scan interval and tag list of an existing entry."""
 
     def __init__(self, config_entry: ConfigEntry) -> None:
         self._entry = config_entry
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        current_tags: list[str] = self._entry.options.get(CONF_TAGS, self._entry.data.get(CONF_TAGS, []))
+
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            tags = split_tags(user_input.get(CONF_TAGS, "") or "")
+            try:
+                _parse_tags_for_validation(tags)
+            except ValueError as err:
+                errors["base"] = "invalid_tags"
+                _LOGGER.warning("Tag validation failed: %s", err)
+                current_tags = tags
+            else:
+                return self.async_create_entry(
+                    title="",
+                    data={CONF_SCAN_INTERVAL: user_input[CONF_SCAN_INTERVAL], CONF_TAGS: tags},
+                )
 
         current = self._entry.options.get(CONF_SCAN_INTERVAL, int(DEFAULT_SCAN_INTERVAL.total_seconds()))
         schema = vol.Schema(
             {
                 vol.Optional(CONF_SCAN_INTERVAL, default=current): int,
+                vol.Optional(CONF_TAGS, default="\n".join(current_tags)): str,
             }
         )
-        return self.async_show_form(step_id="init", data_schema=schema)
+        return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

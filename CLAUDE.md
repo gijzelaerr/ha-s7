@@ -41,3 +41,5 @@ false` and a PEP 735 dependency-groups layout for dev tooling.
   (not per-entry).
 - Releases: bump `manifest.json` version, add a `CHANGELOG.md` entry, tag
   `vX.Y.Z` and publish a GitHub release (HACS installs from releases).
+- Don't put `tags` in a branch name: the HACS validation action then fails to
+  read `hacs.json` and the manifest ("Got None") even though they are fine.

@@ -75,7 +75,7 @@ Rack and slot are only used by the legacy protocol.
 
 On S7-1200/1500, tags are addressed by absolute byte offset, so each data block you read must have **"Optimized block access" turned off**. Symbolic access to optimized blocks is not supported yet.
 
-**Scan interval** is configurable via the integration's *Options* menu (default 30 s).
+The **scan interval** (default 30 s) and the **tag list** can be changed later via the integration's *Configure* (options) dialog. Saving reloads the integration, and entities of removed tags are deleted. Array tags (for example `REAL[5]`) are not supported and are rejected.
 
 ### Example tag list
 

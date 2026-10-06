@@ -22,8 +22,8 @@
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to the PLC. Check host, port, rack, slot, and tag addresses.",
-      "invalid_tags": "One or more tag addresses could not be parsed. Check the syntax."
+      "cannot_connect": "Failed to connect to the PLC. Check host, port, protocol, rack/slot and tag addresses. On S7-1200/1500 the data blocks must have 'Optimized block access' turned off, and the legacy protocol needs PUT/GET to be permitted.",
+      "invalid_tags": "One or more tag addresses could not be parsed, or are arrays (not supported). Check the syntax."
     },
     "abort": {
       "already_configured": "This PLC is already configured."
@@ -34,9 +34,16 @@
       "init": {
         "title": "Options",
         "data": {
-          "scan_interval": "Scan interval (seconds)"
+          "scan_interval": "Scan interval (seconds)",
+          "tags": "Tags"
+        },
+        "data_description": {
+          "tags": "One address per line (or separated by semicolons). Saving reloads the integration and deletes entities of removed tags."
         }
       }
+    },
+    "error": {
+      "invalid_tags": "One or more tag addresses could not be parsed, or are arrays (not supported). Check the syntax."
     }
   },
   "services": {

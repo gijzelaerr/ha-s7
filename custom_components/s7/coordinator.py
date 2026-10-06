@@ -31,15 +31,20 @@ def parse_tags(inputs: list[str]) -> dict[str, Tag]:
     Bare short forms like ``M7.1`` or ``IW22`` are accepted via
     ``parse_tag(..., strict=False)``.
 
-    Raises ValueError listing every failed input.
+    Array tags are rejected. Raises ValueError listing every failed input.
     """
     parsed: dict[str, Tag] = {}
     errors: list[str] = []
     for raw in inputs:
         try:
-            parsed[raw] = parse_tag(raw, strict=False, name=raw)
+            tag = parse_tag(raw, strict=False, name=raw)
         except ValueError as err:
             errors.append(f"{raw!r}: {err}")
+            continue
+        if tag.count > 1:
+            errors.append(f"{raw!r}: array tags are not supported")
+            continue
+        parsed[raw] = tag
     if errors:
         raise ValueError("Invalid tag(s): " + "; ".join(errors))
     return parsed
