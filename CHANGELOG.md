@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Integration icon and logo (`assets/`, and `custom_components/s7/brand/` for Home Assistant).
+
 ## [0.1.1] - 2026-10-06
 
 ### Added
