@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo@2x.png" alt="S7 PLC" height="96"></p>
+
 # ha-s7 — Home Assistant integration for Siemens S7 PLCs
 
 [![Validate](https://github.com/gijzelaerr/ha-s7/actions/workflows/validate.yml/badge.svg)](https://github.com/gijzelaerr/ha-s7/actions/workflows/validate.yml)
