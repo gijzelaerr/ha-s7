@@ -12,13 +12,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from snap7.tags import Tag, parse_tag
 
-from s7 import Client
-
-from .const import DOMAIN
+from .const import DEFAULT_PROTOCOL, DOMAIN
+from .plc import create_client
 
 _LOGGER = logging.getLogger(__name__)
 
-# snap7's Client is blocking and not thread-safe across concurrent
+# The PLC clients are blocking and not thread-safe across concurrent
 # operations, so we serialise all client access with a single asyncio lock.
 # On connection loss we back off before retrying to avoid hot-looping on
 # a PLC that stays down.
@@ -61,6 +60,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         use_tls: bool,
         tags: list[str],
         scan_interval: timedelta,
+        protocol: str = DEFAULT_PROTOCOL,
     ) -> None:
         super().__init__(
             hass,
@@ -68,13 +68,16 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             name=f"{DOMAIN} ({host})",
             update_interval=scan_interval,
         )
-        self._client = Client()
+        self._client = create_client(
+            protocol,
+            host=host,
+            rack=rack,
+            slot=slot,
+            port=port,
+            use_tls=use_tls,
+            password=password,
+        )
         self._host = host
-        self._rack = rack
-        self._slot = slot
-        self._port = port
-        self._password = password
-        self._use_tls = use_tls
         self._tag_strings = list(tags)
         self._parsed_tags = parse_tags(self._tag_strings)
         self._lock = asyncio.Lock()
@@ -120,7 +123,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         return self._connected_since
 
     async def async_connect(self) -> None:
-        """Open the PLC connection (snap7 is blocking; runs in executor)."""
+        """Open the PLC connection (blocking; runs in executor)."""
         async with self._lock:
             await self.hass.async_add_executor_job(self._blocking_connect)
 
@@ -130,14 +133,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self.hass.async_add_executor_job(self._client.disconnect)
 
     def _blocking_connect(self) -> None:
-        self._client.connect(
-            self._host,
-            self._rack,
-            self._slot,
-            self._port,
-            use_tls=self._use_tls,
-            password=self._password,
-        )
+        self._client.connect()
         self._connected_since = datetime.now(UTC)
 
     async def _async_update_data(self) -> dict[str, Any]:
@@ -146,9 +142,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         def _read() -> dict[str, Any]:
             if not self._client.connected:
                 self._blocking_connect()
-            # Passing Tag objects lets the optimizer coalesce adjacent reads.
-            tag_list = list(self._parsed_tags.values())
-            values = self._client.read_tags(tag_list)
+            values = self._client.read_tags(list(self._parsed_tags.values()))
             return dict(zip(self._tag_strings, values, strict=True))
 
         async with self._lock:

@@ -14,18 +14,22 @@ from .const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
+    CONF_PROTOCOL,
     CONF_RACK,
     CONF_SCAN_INTERVAL,
     CONF_SLOT,
     CONF_TAGS,
     CONF_USE_TLS,
     DEFAULT_PORT,
+    DEFAULT_PROTOCOL,
     DEFAULT_RACK,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SLOT,
     DOMAIN,
+    PROTOCOL_CHOICES,
 )
 from .coordinator import parse_tags as _parse_tags_for_validation
+from .plc import create_client
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,6 +39,7 @@ STEP_USER_SCHEMA = vol.Schema(
         vol.Optional(CONF_RACK, default=DEFAULT_RACK): int,
         vol.Optional(CONF_SLOT, default=DEFAULT_SLOT): int,
         vol.Optional(CONF_PORT, default=DEFAULT_PORT): int,
+        vol.Optional(CONF_PROTOCOL, default=DEFAULT_PROTOCOL): vol.In(PROTOCOL_CHOICES),
         vol.Optional(CONF_USE_TLS, default=False): bool,
         vol.Optional(CONF_PASSWORD): str,
         vol.Optional(CONF_TAGS, default=""): str,
@@ -82,23 +87,22 @@ class S7ConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _test_connection(self, user_input: dict[str, Any], tags: list[str]) -> bool:
         """Attempt a throwaway connection to the PLC."""
-        from s7 import Client
-
         # Tags were already validated via _parse_tags_for_validation; reuse
         # that output so read_tags() sees Tag objects (supports nodeS7).
         parsed = _parse_tags_for_validation(tags) if tags else {}
 
         def _try() -> bool:
-            client = Client()
+            client = create_client(
+                user_input.get(CONF_PROTOCOL, DEFAULT_PROTOCOL),
+                host=user_input[CONF_HOST],
+                rack=user_input.get(CONF_RACK, DEFAULT_RACK),
+                slot=user_input.get(CONF_SLOT, DEFAULT_SLOT),
+                port=user_input.get(CONF_PORT, DEFAULT_PORT),
+                use_tls=user_input.get(CONF_USE_TLS, False),
+                password=user_input.get(CONF_PASSWORD),
+            )
             try:
-                client.connect(
-                    user_input[CONF_HOST],
-                    user_input.get(CONF_RACK, DEFAULT_RACK),
-                    user_input.get(CONF_SLOT, DEFAULT_SLOT),
-                    user_input.get(CONF_PORT, DEFAULT_PORT),
-                    use_tls=user_input.get(CONF_USE_TLS, False),
-                    password=user_input.get(CONF_PASSWORD),
-                )
+                client.connect()
                 if parsed:
                     client.read_tags(list(parsed.values()))
                 client.disconnect()

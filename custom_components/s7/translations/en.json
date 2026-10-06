@@ -3,15 +3,21 @@
     "step": {
       "user": {
         "title": "Siemens S7 PLC",
-        "description": "Enter your PLC connection details. For Tags, use PLC4X syntax ('DB1.DBD0:REAL', 'M10.5:BOOL') or nodeS7 syntax ('DB1,R0', 'M10.5', 'IW22') — separate multiple tags with newlines or semicolons.",
+        "description": "Enter your PLC connection details. Tags use PLC4X syntax ('DB1.DBD0:REAL', 'M10.5:BOOL') or nodeS7 syntax ('DB1,R0', 'M10.5', 'IW22'); separate multiple tags with newlines or semicolons. On S7-1200/1500, data blocks must have 'Optimized block access' turned off.",
         "data": {
           "host": "Host",
           "rack": "Rack",
           "slot": "Slot",
           "port": "TCP port",
-          "use_tls": "Use TLS (S7CommPlus V2/V3)",
-          "password": "PLC password (optional)",
+          "protocol": "Protocol",
+          "use_tls": "Use TLS (S7CommPlus V2/V3 only)",
+          "password": "PLC password (S7CommPlus only, optional)",
           "tags": "Tags"
+        },
+        "data_description": {
+          "protocol": "Legacy: classic S7 (PUT/GET) for S7-300/400 and S7-1200/1500 with PUT/GET enabled. S7CommPlus: S7-1200/1500 where PUT/GET is disabled.",
+          "rack": "Used by the legacy protocol only.",
+          "slot": "Used by the legacy protocol only."
         }
       }
     },
