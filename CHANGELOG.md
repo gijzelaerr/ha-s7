@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Config and service schemas use `probatio` (as in current Home Assistant) instead of `voluptuous`.
+- Dev dependencies updated (`pytest-homeassistant-custom-component` 0.13.371, `s7commplus` 0.2.0).
+
 ## [0.1.2] - 2026-10-06
 
 ### Added

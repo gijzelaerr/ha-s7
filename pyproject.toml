@@ -68,10 +68,6 @@ module = "pytest_homeassistant_custom_component.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = "voluptuous.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
 
