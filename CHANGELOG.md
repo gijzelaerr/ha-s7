@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-21
+
+### Fixed
+- Setup raises `ConfigEntryNotReady` when the PLC is unreachable at startup, so Home Assistant retries instead of leaving the entry in a setup error.
+
 ## [0.1.3] - 2026-10-13
 
 ### Changed

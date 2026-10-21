@@ -7,6 +7,7 @@ from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import entity_registry as er
 
 from .const import (
@@ -54,7 +55,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         protocol=data.get(CONF_PROTOCOL, DEFAULT_PROTOCOL),
     )
 
-    await coordinator.async_connect()
+    try:
+        await coordinator.async_connect()
+    except Exception as err:
+        raise ConfigEntryNotReady(f"Cannot connect to PLC at {coordinator.host}: {err}") from err
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
