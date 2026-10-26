@@ -21,7 +21,7 @@ override-dependencies = ["pyjwt>=2.15.0", "cryptography>=50.0.0"]
 # project itself to be installed as a package (which conflicts with HA's
 # custom_components loader).
 dev = [
-    "python-snap7>=3.2.1",
+    "python-snap7>=3.3.0",
     "s7commplus>=0.3.0",
     "homeassistant>=2024.12.0",
     "pytest>=8.0",
