@@ -22,7 +22,7 @@ override-dependencies = ["pyjwt>=2.15.0", "cryptography>=50.0.0"]
 # custom_components loader).
 dev = [
     "python-snap7>=3.2.1",
-    "s7commplus>=0.2.0",
+    "s7commplus>=0.3.0",
     "homeassistant>=2024.12.0",
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
