@@ -38,6 +38,7 @@ def parse_tags(inputs: list[str]) -> dict[str, Tag]:
     for raw in inputs:
         try:
             tag = parse_tag(raw, strict=False, name=raw)
+            _ = tag.size  # parse_tag accepts STRING without a length and unknown types
         except ValueError as err:
             errors.append(f"{raw!r}: {err}")
             continue
