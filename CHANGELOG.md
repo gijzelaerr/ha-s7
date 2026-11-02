@@ -6,6 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- The options form requires a positive scan interval; a negative one polled the PLC in a tight loop. (#42)
+- The config flow closes its test connection when the test read fails. (#43)
+- An address listed twice no longer makes setup retry forever. (#44)
+- Tags whose type has no known size (`STRING` without a length, `S5TIME`) are refused when entered, instead of failing every poll. (#45)
+- Failed writes raise Home Assistant errors that name the tag. (#46)
+- `write_tag` keeps text such as `123` or `on` as text on string tags, and `pulse_tag` refuses anything but a BOOL. (#47)
+- `pulse_tag` releases the bit when the pulse is cancelled and retries a failed release. (#48)
+- String values over 255 characters show their start instead of `unknown`, and their text entity is created. (#49)
+- REAL values show as the number the PLC holds: 23.1, not 23.1000003814697. (#50)
+- REAL and LREAL number entities have a fractional step, and large integers stay exact. (#51)
+- PLCs on one host keep their own entities and device, and two slots behind one address can both be added. Existing entries migrate and keep their entity IDs. (#52)
+- Requires `python-snap7` 3.3.1 and `s7commplus` 0.3.0, and debug logging includes `s7commplus`. (#53)
+
 ## [0.1.4] - 2026-10-21
 
 ### Fixed
