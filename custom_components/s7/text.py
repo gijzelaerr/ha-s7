@@ -55,7 +55,7 @@ class S7Text(S7BaseEntity, TextEntity):
     @property
     def native_value(self) -> str | None:
         value = self._value()
-        return None if value is None else str(value)
+        return None if value is None else str(value)[: self.max]
 
     async def async_set_value(self, value: str) -> None:
         await self.coordinator.async_write_tag(self._tag, value)
