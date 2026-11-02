@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from snap7.tags import Tag, parse_tag
 
@@ -175,6 +176,18 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         _LOGGER.debug("Reconnect backoff: %ss (failure #%d)", delay, self._connect_failures)
         await asyncio.sleep(delay)
 
+    def resolve_tag(self, tag_string: str) -> Tag:
+        """Return the tag for a configured address, or parse an ad-hoc one."""
+        tag = self._parsed_tags.get(tag_string)
+        if tag is not None:
+            return tag
+        try:
+            tag = parse_tag(tag_string, strict=False, name=tag_string)
+            _ = tag.size
+        except ValueError as err:
+            raise ServiceValidationError(f"Invalid tag address {tag_string!r}: {err}") from err
+        return tag
+
     async def async_write_tag(self, tag_string: str, value: Any) -> None:
         """Write a value to the tag identified by its configured address string.
 
@@ -182,9 +195,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         arbitrary addresses passed via the ``write_tag`` service. Unknown
         strings are parsed on the fly via ``parse_tag(strict=False)``.
         """
-        tag = self._parsed_tags.get(tag_string)
-        if tag is None:
-            tag = parse_tag(tag_string, strict=False, name=tag_string)
+        tag = self.resolve_tag(tag_string)
 
         def _write() -> None:
             if not self._client.connected:
@@ -192,7 +203,12 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._client.write_tag(tag, value)
 
         async with self._lock:
-            await self.hass.async_add_executor_job(_write)
+            try:
+                await self.hass.async_add_executor_job(_write)
+            except (TypeError, ValueError) as err:
+                raise ServiceValidationError(f"Cannot write {value!r} to {tag_string}: {err}") from err
+            except Exception as err:
+                raise HomeAssistantError(f"Failed to write {tag_string}: {err}") from err
             self._write_count += 1
         await self.async_request_refresh()
 
