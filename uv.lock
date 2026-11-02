@@ -1097,7 +1097,7 @@ dev = [
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-asyncio", specifier = ">=0.23" },
     { name = "pytest-homeassistant-custom-component", specifier = ">=0.13.375,<0.13.376" },
-    { name = "python-snap7", specifier = ">=3.3.0" },
+    { name = "python-snap7", specifier = ">=3.3.1" },
     { name = "ruff", specifier = ">=0.17.3" },
     { name = "s7commplus", specifier = ">=0.3.0" },
 ]
@@ -2478,11 +2478,11 @@ wheels = [
 
 [[package]]
 name = "python-snap7"
-version = "3.3.0"
+version = "3.3.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/32/5f/fe69f6dbda505350894b747ec0b2c564597859c19849edfb433716eea3d6/python_snap7-3.3.0.tar.gz", hash = "sha256:cd4d6a3eb3f199c78a1725e54a437ef664da7988c10817e8b19b58ed99ef8b04", size = 305256, upload-time = "2026-10-20T09:16:34.567Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/93/38/3214dbd44d02633d7eaca74efb2fceb8ac9a2c83223382b29df7c1768bc1/python_snap7-3.3.1.tar.gz", hash = "sha256:1f1f6f3590eb095c4eb2b3c4e43dde529d9ac1d23acea07308186ce0cae2d167", size = 306609, upload-time = "2026-10-28T17:22:20.383Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c8/84/a03d9e6634142c8e0a13d9e3e2e841732f25714d4766478271c4cb03d518/python_snap7-3.3.0-py3-none-any.whl", hash = "sha256:99aec46ef78d526ad3106b9359bd259ca5cd151034500b21a8732ba901e406f3", size = 160277, upload-time = "2026-10-20T09:16:33.103Z" },
+    { url = "https://files.pythonhosted.org/packages/78/7b/8b718fac33dc084a3243e921cfe848109de508552a4519408f9c81661d03/python_snap7-3.3.1-py3-none-any.whl", hash = "sha256:b6133aa7f713ffda5adf28ffa40febb937ec1c73ea03f8d72e4ca206b082fb96", size = 160869, upload-time = "2026-10-28T17:22:18.422Z" },
 ]
 
 [[package]]
