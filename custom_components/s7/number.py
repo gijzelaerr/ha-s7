@@ -48,6 +48,7 @@ _RANGES: dict[str, tuple[float, float]] = {
     "LREAL": (-1.7e308, 1.7e308),
 }
 
+_FLOAT_TYPES = ("REAL", "LREAL")
 _WRITABLE_AREAS = {Area.DB, Area.MK, Area.PA}
 
 
@@ -72,13 +73,15 @@ class S7Number(S7BaseEntity, NumberEntity):
         self._attr_native_min_value = lo
         self._attr_native_max_value = hi
         self._datatype = datatype
+        if datatype in _FLOAT_TYPES:
+            self._attr_native_step = 0.001  # the default of 1 is for whole numbers
 
     @property
     def native_value(self) -> float | None:
-        value = self._value()
-        return float(value) if value is not None else None
+        # Integers stay integers: LINT and ULINT do not fit a float exactly.
+        return self._value()
 
     async def async_set_native_value(self, value: float) -> None:
         # Integer types need int, REAL/LREAL accept float
-        to_write: float | int = value if self._datatype in ("REAL", "LREAL") else int(value)
+        to_write: float | int = value if self._datatype in _FLOAT_TYPES else int(value)
         await self.coordinator.async_write_tag(self._tag, to_write)
