@@ -1,6 +1,8 @@
 """Constants for the s7 integration."""
 
+from collections.abc import Mapping
 from datetime import timedelta
+from typing import Any
 
 DOMAIN = "s7"
 
@@ -26,6 +28,15 @@ DEFAULT_RACK = 0
 DEFAULT_SLOT = 1
 DEFAULT_SCAN_INTERVAL = timedelta(seconds=30)
 DEFAULT_PROTOCOL = PROTOCOL_LEGACY
+
+
+def plc_id(data: Mapping[str, Any]) -> str:
+    """Identify one PLC. Rack and slot only select a CPU on the legacy protocol."""
+    base = f"{data[CONF_HOST]}:{data.get(CONF_PORT, DEFAULT_PORT)}"
+    if data.get(CONF_PROTOCOL, DEFAULT_PROTOCOL) == PROTOCOL_S7COMMPLUS:
+        return base
+    return f"{base}:{data.get(CONF_RACK, DEFAULT_RACK)}:{data.get(CONF_SLOT, DEFAULT_SLOT)}"
+
 
 # Platforms this integration provides
 PLATFORMS = ["sensor", "binary_sensor", "switch", "number", "text"]

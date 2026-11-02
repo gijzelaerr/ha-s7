@@ -27,6 +27,7 @@ from .const import (
     DEFAULT_SLOT,
     DOMAIN,
     PROTOCOL_CHOICES,
+    plc_id,
 )
 from .coordinator import parse_tags as _parse_tags_for_validation
 from .plc import create_client
@@ -59,6 +60,7 @@ class S7ConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Siemens S7 PLC."""
 
     VERSION = 1
+    MINOR_VERSION = 2
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
@@ -78,7 +80,7 @@ class S7ConfigFlow(ConfigFlow, domain=DOMAIN):
                 if not valid:
                     errors["base"] = "cannot_connect"
                 else:
-                    await self.async_set_unique_id(f"{host}:{user_input[CONF_PORT]}")
+                    await self.async_set_unique_id(plc_id(user_input))
                     self._abort_if_unique_id_configured()
 
                     data = dict(user_input)

@@ -128,9 +128,9 @@ class S7DiagnosticSensor(CoordinatorEntity[S7Coordinator], SensorEntity):
         super().__init__(coordinator)
         self._metric = metric
         self._attr_name = name
-        self._attr_unique_id = f"{coordinator.host}_diag_{metric}"
+        self._attr_unique_id = f"{coordinator.plc_id}_diag_{metric}"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, coordinator.host)},
+            identifiers={(DOMAIN, coordinator.plc_id)},
             name=f"S7 PLC {coordinator.host}",
             manufacturer="Siemens",
             model="S7",
