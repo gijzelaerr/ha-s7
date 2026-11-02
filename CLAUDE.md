@@ -24,7 +24,7 @@ false` and a PEP 735 dependency-groups layout for dev tooling.
   pass.
 - Tests: `uv run pytest -v`. The fixtures spin up real `python-snap7` and
   `s7commplus` server emulators; the HA test harness needs `fcntl`, so on
-  Windows run pytest under WSL. No mocks of the PLC protocol — no mocks of the PLC protocol.
+  Windows run pytest under WSL. No mocks of the PLC protocol.
 
 ## Architecture quick facts
 
