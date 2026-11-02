@@ -29,7 +29,7 @@ dev = [
     # 0.13.368+ pins the Home Assistant 2026.10 beta; stay on stable until it ships.
     "pytest-homeassistant-custom-component>=0.13.375,<0.13.376",
     "ruff>=0.17.2",
-    "mypy>=2.4.0",
+    "mypy>=2.4.1",
     "pre-commit>=4.7.0",
 ]
 
