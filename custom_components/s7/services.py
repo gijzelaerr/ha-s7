@@ -18,7 +18,7 @@ from typing import Any
 
 import probatio as vol
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN
@@ -28,6 +28,8 @@ _LOGGER = logging.getLogger(__name__)
 
 SERVICE_WRITE_TAG = "write_tag"
 SERVICE_PULSE_TAG = "pulse_tag"
+
+_TEXT_TYPES = ("STRING", "WSTRING", "FSTRING", "CHAR", "WCHAR")
 
 _WRITE_TAG_SCHEMA = vol.Schema(
     {
@@ -54,13 +56,14 @@ def _get_coordinator(hass: HomeAssistant, entry_id: str) -> S7Coordinator:
     return coordinator
 
 
-def _coerce_value(raw: Any) -> Any:
+def _coerce_value(raw: Any, datatype: str) -> Any:
     """Service ``value`` comes as a string from the UI — coerce to the obvious type.
 
-    Users who need to force a type should use a template that yields the
-    correct Python object directly.
+    Text tags keep the string as it is, so ``"123"`` and ``"on"`` can be written
+    to them. Users who need to force a type should use a template that yields
+    the correct Python object directly.
     """
-    if not isinstance(raw, str):
+    if not isinstance(raw, str) or datatype.upper().startswith(_TEXT_TYPES):
         return raw
     lowered = raw.strip().lower()
     if lowered in ("true", "on", "yes"):
@@ -82,11 +85,13 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     async def _write_tag(call: ServiceCall) -> None:
         coordinator = _get_coordinator(hass, call.data["entry_id"])
-        value = _coerce_value(call.data["value"])
+        value = _coerce_value(call.data["value"], coordinator.resolve_tag(call.data["tag"]).datatype)
         await coordinator.async_write_tag(call.data["tag"], value)
 
     async def _pulse_tag(call: ServiceCall) -> None:
         coordinator = _get_coordinator(hass, call.data["entry_id"])
+        if coordinator.resolve_tag(call.data["tag"]).datatype.upper() != "BOOL":
+            raise ServiceValidationError(f"pulse_tag needs a BOOL tag, got {call.data['tag']}")
         await coordinator.async_pulse_tag(call.data["tag"], call.data["duration"])
 
     hass.services.async_register(DOMAIN, SERVICE_WRITE_TAG, _write_tag, schema=_WRITE_TAG_SCHEMA)
