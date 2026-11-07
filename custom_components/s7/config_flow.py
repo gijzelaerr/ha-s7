@@ -111,11 +111,16 @@ class S7ConfigFlow(ConfigFlow, domain=DOMAIN):
                 client.connect()
                 if parsed:
                     client.read_tags(list(parsed.values()))
-                client.disconnect()
                 return True
             except Exception as err:
                 _LOGGER.warning("PLC connection test failed: %s", err)
                 return False
+            finally:
+                try:
+                    if client.connected:
+                        client.disconnect()
+                except Exception as err:
+                    _LOGGER.debug("Closing the test connection failed: %s", err)
 
         return await self.hass.async_add_executor_job(_try)
 
