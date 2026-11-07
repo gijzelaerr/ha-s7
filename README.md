@@ -29,7 +29,7 @@ Two wire protocols are supported, both pure Python with no native dependencies:
   | `DB`, `M`, `Q` | `STRING`, `WSTRING` | `sensor` + `text` (writable) |
   | `I`, or any area | numeric, `DATE`, `TIME`, … | `sensor` (read-only) |
 - **All S7 types** — `BOOL`, `BYTE`/`SINT`/`USINT`, `INT`/`UINT`/`WORD`, `DINT`/`UDINT`/`DWORD`, `REAL`, `LREAL`, `LINT`/`ULINT`, `STRING[n]`, `WSTRING[n]`, `DATE`, `TIME`, `TOD`, `DT`, `DTL`, `LDT`, `LTIME`, `LTOD`
-- **Batched reads** — one multi-variable request per poll on both protocols
+- **Batched reads** — multi-variable requests on the legacy protocol and for DB tags on S7CommPlus (other S7CommPlus areas are read one at a time)
 - **TLS + password authentication** — S7CommPlus V2/V3 on S7-1200/1500
 - **Diagnostic sensors** — read/write counters, read latency and connected-since per PLC (disabled by default; enable them on the device page)
 - **`write_tag` and `pulse_tag` services** for automations
