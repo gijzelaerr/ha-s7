@@ -39,7 +39,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data = entry.data
     options = entry.options
 
-    scan_seconds = options.get(CONF_SCAN_INTERVAL) or DEFAULT_SCAN_INTERVAL.total_seconds()
+    scan_seconds = options.get(CONF_SCAN_INTERVAL) or 0
+    if scan_seconds <= 0:  # entries saved before the options form required a positive value
+        scan_seconds = DEFAULT_SCAN_INTERVAL.total_seconds()
     scan_interval = timedelta(seconds=int(scan_seconds))
 
     coordinator = S7Coordinator(

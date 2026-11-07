@@ -152,7 +152,7 @@ class S7OptionsFlow(OptionsFlow):
         current = self._entry.options.get(CONF_SCAN_INTERVAL, int(DEFAULT_SCAN_INTERVAL.total_seconds()))
         schema = vol.Schema(
             {
-                vol.Optional(CONF_SCAN_INTERVAL, default=current): int,
+                vol.Optional(CONF_SCAN_INTERVAL, default=current): vol.All(int, vol.Range(min=1)),
                 vol.Optional(CONF_TAGS, default="\n".join(current_tags)): str,
             }
         )
