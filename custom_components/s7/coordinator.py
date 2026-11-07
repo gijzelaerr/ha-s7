@@ -23,6 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 # On connection loss we back off before retrying to avoid hot-looping on
 # a PLC that stays down.
 _RECONNECT_BACKOFF_SECONDS = (1.0, 2.0, 5.0, 10.0)
+_PULSE_RELEASE_ATTEMPTS = 3
 
 
 def parse_tags(inputs: list[str]) -> dict[str, Tag]:
@@ -90,6 +91,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._tag_strings = list(self._parsed_tags)
         self._lock = asyncio.Lock()
         self._connect_failures = 0
+        self._closing = False
         # Diagnostic metrics
         self._read_count = 0
         self._write_count = 0
@@ -136,6 +138,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             await self.hass.async_add_executor_job(self._blocking_connect)
 
     async def async_disconnect(self) -> None:
+        self._closing = True
         async with self._lock:
             if self._client.connected:
                 await self.hass.async_add_executor_job(self._client.disconnect)
@@ -221,8 +224,25 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         edge (``start`` / ``acknowledge`` / ``reset`` buttons). The sleep is
         asynchronous so other coordinator work can still run; the
         client-level lock is released during the wait so reads are not
-        blocked.
+        blocked. The release also runs if the pulse is cancelled.
         """
         await self.async_write_tag(tag_string, True)
-        await asyncio.sleep(duration)
-        await self.async_write_tag(tag_string, False)
+        try:
+            await asyncio.sleep(duration)
+        finally:
+            await asyncio.shield(self.hass.async_create_task(self._async_release_pulse(tag_string)))
+
+    async def _async_release_pulse(self, tag_string: str) -> None:
+        """Write False, retrying over a new connection, so the bit does not stay set."""
+        for attempt in range(1, _PULSE_RELEASE_ATTEMPTS + 1):
+            try:
+                await self.async_write_tag(tag_string, False)
+                break
+            except Exception as err:
+                if attempt == _PULSE_RELEASE_ATTEMPTS:
+                    _LOGGER.error("Could not release pulse on %s, the bit may still be set: %s", tag_string, err)
+                    raise
+                async with self._lock:
+                    await self._async_mark_reconnect()
+        if self._closing:  # unloaded during the pulse: the write reconnected
+            await self.async_disconnect()
