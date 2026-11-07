@@ -83,8 +83,9 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             password=password,
         )
         self._host = host
-        self._tag_strings = list(tags)
-        self._parsed_tags = parse_tags(self._tag_strings)
+        self._parsed_tags = parse_tags(list(tags))
+        # parse_tags keeps one entry per address, and every value read needs one string.
+        self._tag_strings = list(self._parsed_tags)
         self._lock = asyncio.Lock()
         self._connect_failures = 0
         # Diagnostic metrics

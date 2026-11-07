@@ -52,7 +52,7 @@ def split_tags(raw: str) -> list[str]:
 
     Commas are not separators: nodeS7 addresses (``DB1,R0``) contain them.
     """
-    return [t.strip() for t in re.split(r"[\n;]", raw) if t.strip()]
+    return list(dict.fromkeys(t.strip() for t in re.split(r"[\n;]", raw) if t.strip()))
 
 
 class S7ConfigFlow(ConfigFlow, domain=DOMAIN):
