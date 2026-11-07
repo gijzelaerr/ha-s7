@@ -8,6 +8,7 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
 
 from .const import (
@@ -27,11 +28,34 @@ from .const import (
     DEFAULT_SLOT,
     DOMAIN,
     PLATFORMS,
+    plc_id,
 )
 from .coordinator import S7Coordinator
 from .services import async_setup_services, async_unload_services
 
 _LOGGER = logging.getLogger(__name__)
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Move unique IDs and the device from the host name to the full PLC id."""
+    if entry.version > 1:
+        return False
+    if entry.minor_version < 2:
+        host = entry.data[CONF_HOST]
+        new_id = plc_id(entry.data)
+
+        def _new_unique_id(entity: er.RegistryEntry) -> dict[str, str] | None:
+            if not entity.unique_id.startswith(f"{host}_"):
+                return None
+            return {"new_unique_id": f"{new_id}_{entity.unique_id.removeprefix(f'{host}_')}"}
+
+        await er.async_migrate_entries(hass, entry.entry_id, _new_unique_id)
+        devices = dr.async_get(hass)
+        for device in dr.async_entries_for_config_entry(devices, entry.entry_id):
+            if (DOMAIN, host) in device.identifiers:
+                devices.async_update_device(device.id, new_identifiers={(DOMAIN, new_id)})
+        hass.config_entries.async_update_entry(entry, unique_id=new_id, minor_version=2)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -76,8 +100,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 def _async_remove_stale_entities(hass: HomeAssistant, entry: ConfigEntry, coordinator: S7Coordinator) -> None:
     """Drop registry entries for tags that were removed from the configuration."""
     registry = er.async_get(hass)
-    keep = {f"{coordinator.host}_{tag}" for tag in coordinator.tags}
-    diagnostic_prefix = f"{coordinator.host}_diag_"
+    keep = {f"{coordinator.plc_id}_{tag}" for tag in coordinator.tags}
+    diagnostic_prefix = f"{coordinator.plc_id}_diag_"
     for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
         if entity.unique_id not in keep and not entity.unique_id.startswith(diagnostic_prefix):
             registry.async_remove(entity.entity_id)

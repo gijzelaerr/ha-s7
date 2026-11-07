@@ -44,9 +44,9 @@ async def test_diagnostic_sensors_registered(hass: HomeAssistant, s7_server) -> 
     diag_entries = [
         re
         for re in registry.entities.values()
-        if re.config_entry_id == entry.entry_id and re.unique_id.startswith("127.0.0.1_diag_")
+        if re.config_entry_id == entry.entry_id and re.unique_id.startswith("127.0.0.1:") and "_diag_" in re.unique_id
     ]
-    found_metrics = {re.unique_id.removeprefix("127.0.0.1_diag_") for re in diag_entries}
+    found_metrics = {re.unique_id.split("_diag_")[1] for re in diag_entries}
     assert found_metrics == set(_EXPECTED_METRICS)
     # Diagnostic-only sensors must not be enabled by default.
     assert all(re.disabled_by is not None for re in diag_entries)

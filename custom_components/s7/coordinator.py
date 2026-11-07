@@ -13,7 +13,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from snap7.tags import Tag, parse_tag
 
-from .const import DEFAULT_PROTOCOL, DOMAIN
+from .const import CONF_HOST, CONF_PORT, CONF_PROTOCOL, CONF_RACK, CONF_SLOT, DEFAULT_PROTOCOL, DOMAIN, plc_id
 from .plc import create_client
 
 _LOGGER = logging.getLogger(__name__)
@@ -76,6 +76,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             name=f"{DOMAIN} ({host})",
             update_interval=scan_interval,
         )
+        self._plc_id = plc_id({CONF_HOST: host, CONF_PORT: port, CONF_PROTOCOL: protocol, CONF_RACK: rack, CONF_SLOT: slot})
         self._client = create_client(
             protocol,
             host=host,
@@ -101,6 +102,11 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
     @property
     def host(self) -> str:
         return self._host
+
+    @property
+    def plc_id(self) -> str:
+        """What the unique IDs and the device of this PLC are built from."""
+        return self._plc_id
 
     @property
     def tags(self) -> list[str]:
