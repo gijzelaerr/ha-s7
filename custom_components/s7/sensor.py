@@ -6,7 +6,7 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory, UnitOfTime
+from homeassistant.const import MAX_LENGTH_STATE_STATE, EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -103,7 +103,8 @@ async def async_setup_entry(
 class S7Sensor(S7BaseEntity, SensorEntity):
     @property
     def native_value(self):
-        return self._value()
+        value = self._value()
+        return value[:MAX_LENGTH_STATE_STATE] if isinstance(value, str) else value
 
 
 class S7DiagnosticSensor(CoordinatorEntity[S7Coordinator], SensorEntity):
