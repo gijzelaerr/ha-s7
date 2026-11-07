@@ -2,11 +2,30 @@
 
 from __future__ import annotations
 
+import struct
+
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import S7Coordinator
+
+
+def shortest_real(value: float) -> float:
+    """Return the shortest decimal that is still the same 32-bit REAL.
+
+    A REAL decoded to a Python float shows its binary noise: 23.1 becomes
+    23.100000381469727.
+    """
+    exact = struct.pack(">f", value)
+    for digits in range(6, 9):
+        rounded = float(f"{value:.{digits}g}")
+        try:
+            if struct.pack(">f", rounded) == exact:
+                return rounded
+        except OverflowError:  # rounded up past the largest REAL
+            continue
+    return value
 
 
 class S7BaseEntity(CoordinatorEntity[S7Coordinator]):
@@ -32,4 +51,7 @@ class S7BaseEntity(CoordinatorEntity[S7Coordinator]):
 
     def _value(self):
         data = self.coordinator.data or {}
-        return data.get(self._tag)
+        value = data.get(self._tag)
+        if isinstance(value, float) and self.coordinator.parsed_tags[self._tag].datatype.upper() == "REAL":
+            return shortest_real(value)
+        return value
