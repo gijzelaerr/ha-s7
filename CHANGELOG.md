@@ -6,11 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-08
+
 ### Fixed
 - The options form requires a positive scan interval; a negative one polled the PLC in a tight loop. (#42)
 - The config flow closes its test connection when the test read fails. (#43)
 - An address listed twice no longer makes setup retry forever. (#44)
-- Tags whose type has no known size (`STRING` without a length, `S5TIME`) are refused when entered, instead of failing every poll. (#45)
+- Tags whose type has no known size, such as `STRING` without a length, are refused when entered, instead of failing every poll. (#45)
 - Failed writes raise Home Assistant errors that name the tag. (#46)
 - `write_tag` keeps text such as `123` or `on` as text on string tags, and `pulse_tag` refuses anything but a BOOL. (#47)
 - `pulse_tag` releases the bit when the pulse is cancelled and retries a failed release. (#48)
@@ -18,8 +20,8 @@ All notable changes to this project are documented here. The format follows
 - REAL values show as the number the PLC holds: 23.1, not 23.1000003814697. (#50)
 - REAL and LREAL number entities have a fractional step, and large integers stay exact. (#51)
 - PLCs on one host keep their own entities and device, and two slots behind one address can both be added. Existing entries migrate and keep their entity IDs. (#52)
-- Requires `python-snap7` 3.3.1 and `s7commplus` 0.3.0, and debug logging includes `s7commplus`. (#53)
-- Requires `python-snap7` 3.4.0 and uses its public tag codec instead of private helpers. `S5TIME` tags are accepted and shown as a sensor; they can't be written yet. (#58)
+- Debug logging includes `s7commplus`. (#53)
+- Requires `python-snap7` 3.4.0 and uses its public tag codec instead of private helpers. `S5TIME` tags are accepted and shown as a sensor; they can't be written yet. (#53, #58)
 - Requires `s7commplus` 0.4.0: writes and subscriptions work on an S7-1200 without TLS, and a request that times out ends the session so the next poll reconnects. (#59)
 
 ## [0.1.4] - 2026-10-21
@@ -70,7 +72,10 @@ First release.
 - S7CommPlus has only been tested against an emulator, not a physical PLC. TLS and password authentication, and the M/I/Q areas over S7CommPlus, are untested.
 - Tags use absolute byte-offset addressing. On S7-1200/1500, data blocks must have "Optimized block access" turned off; symbolic access to optimized blocks is not implemented.
 
-[Unreleased]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/gijzelaerr/ha-s7/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.4...v0.2.0
+[0.1.4]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.3...v0.1.4
+[0.1.3]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/gijzelaerr/ha-s7/releases/tag/v0.1.0
