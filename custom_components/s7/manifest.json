@@ -8,6 +8,6 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/gijzelaerr/ha-s7/issues",
   "loggers": ["s7", "s7commplus", "snap7"],
-  "requirements": ["python-snap7>=3.4.0", "s7commplus>=0.3.0"],
+  "requirements": ["python-snap7>=3.4.0", "s7commplus>=0.4.0"],
   "version": "0.1.4"
 }

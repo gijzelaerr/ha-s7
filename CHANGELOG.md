@@ -20,6 +20,7 @@ All notable changes to this project are documented here. The format follows
 - PLCs on one host keep their own entities and device, and two slots behind one address can both be added. Existing entries migrate and keep their entity IDs. (#52)
 - Requires `python-snap7` 3.3.1 and `s7commplus` 0.3.0, and debug logging includes `s7commplus`. (#53)
 - Requires `python-snap7` 3.4.0 and uses its public tag codec instead of private helpers. `S5TIME` tags are accepted and shown as a sensor; they can't be written yet. (#58)
+- Requires `s7commplus` 0.4.0: writes and subscriptions work on an S7-1200 without TLS, and a request that times out ends the session so the next poll reconnects. (#59)
 
 ## [0.1.4] - 2026-10-21
 
