@@ -39,6 +39,7 @@ _SENSOR_TYPES = {
     "FSTRING",
     "TIME",
     "LTIME",
+    "S5TIME",
     "TOD",
     "LTOD",
     "DATE",

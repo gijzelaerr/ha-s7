@@ -19,8 +19,7 @@ from typing import Any, Protocol
 from s7commplus import Client as CommPlusClient
 from s7commplus.protocol import DataType, Ids
 from snap7.client import Client as LegacyClient
-from snap7.client import _decode_tag, _encode_tag
-from snap7.tags import Tag
+from snap7.tags import Tag, decode_tag, encode_tag
 from snap7.type import Area
 
 from .const import PROTOCOL_LEGACY, PROTOCOL_S7COMMPLUS
@@ -142,10 +141,10 @@ class CommPlusPlcClient:
             for i, chunk in zip(db_idx, chunks, strict=True):
                 if len(chunk) < tags[i].size:
                     raise RuntimeError(f"Read failed for {tags[i]}")
-                results[i] = _decode_tag(tags[i], bytearray(chunk))
+                results[i] = decode_tag(tags[i], bytearray(chunk))
         for i, tag in enumerate(tags):
             if tag.area != Area.DB:
-                results[i] = _decode_tag(tag, bytearray(self._read_raw(tag)))
+                results[i] = decode_tag(tag, bytearray(self._read_raw(tag)))
         return results
 
     def write_tag(self, tag: Tag, value: Any) -> None:
@@ -153,7 +152,7 @@ class CommPlusPlcClient:
         buf = bytearray(tag.size)
         if tag.datatype.upper() == "BOOL":
             buf[:] = self._read_raw(tag)[: tag.size]
-        _encode_tag(tag, buf, value)
+        encode_tag(tag, buf, value)
         datatype = _WRITE_DATATYPES.get(tag.datatype.upper(), DataType.BLOB)
         if tag.area == Area.DB:
             self._client.db_write(tag.db_number, tag.byte_offset, bytes(buf), datatype)
