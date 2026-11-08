@@ -22,10 +22,15 @@ async def _setup(hass: HomeAssistant, port: int, tags: list[str], **options) -> 
     return entry
 
 
-@pytest.mark.parametrize("tag", ["DB1.DBB0:STRING", "DB1.DBW0:S5TIME", "DB1.DBW0:BOGUS"])
+@pytest.mark.parametrize("tag", ["DB1.DBB0:STRING", "DB1.DBW0:BOGUS"])
 def test_parse_tags_rejects_a_type_without_a_size(tag: str) -> None:
     with pytest.raises(ValueError, match="Unknown S7 type"):
         parse_tags([tag])
+
+
+def test_parse_tags_keeps_s5time() -> None:
+    """python-snap7 3.4.0 gave S5TIME a size, so it can be read (#56)."""
+    assert parse_tags(["DB1.DBW0:S5TIME"])["DB1.DBW0:S5TIME"].size == 2
 
 
 def test_parse_tags_keeps_a_string_with_a_length() -> None:

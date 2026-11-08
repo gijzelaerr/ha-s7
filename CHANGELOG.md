@@ -19,6 +19,7 @@ All notable changes to this project are documented here. The format follows
 - REAL and LREAL number entities have a fractional step, and large integers stay exact. (#51)
 - PLCs on one host keep their own entities and device, and two slots behind one address can both be added. Existing entries migrate and keep their entity IDs. (#52)
 - Requires `python-snap7` 3.3.1 and `s7commplus` 0.3.0, and debug logging includes `s7commplus`. (#53)
+- Requires `python-snap7` 3.4.0 and uses its public tag codec instead of private helpers. `S5TIME` tags are accepted and shown as a sensor; they can't be written yet. (#58)
 
 ## [0.1.4] - 2026-10-21
 

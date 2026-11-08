@@ -5,7 +5,7 @@ Guidance for Claude Code (claude.ai/code) when working in this repo.
 ## Project
 
 Home Assistant custom integration for Siemens S7 PLCs, backed by
-`python-snap7` (>=3.2.1, classic S7) and `s7commplus` (S7CommPlus for
+`python-snap7` (>=3.4.0, classic S7) and `s7commplus` (S7CommPlus for
 S7-1200/1500). Not a Python package — HA's custom-component
 loader owns the namespace. `pyproject.toml` has `[tool.uv] package =
 false` and a PEP 735 dependency-groups layout for dev tooling.
