@@ -9,6 +9,7 @@ from typing import Any
 import probatio as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.core import callback
+from homeassistant.helpers.selector import TextSelector, TextSelectorConfig
 
 from .const import (
     CONF_HOST,
@@ -34,6 +35,10 @@ from .plc import create_client
 
 _LOGGER = logging.getLogger(__name__)
 
+# A multi-line box: pasted tags keep their line breaks, which a plain ``str``
+# field drops, joining every tag into one unparseable address (#61).
+TAGS_SELECTOR = TextSelector(TextSelectorConfig(multiline=True))
+
 STEP_USER_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST): str,
@@ -43,7 +48,7 @@ STEP_USER_SCHEMA = vol.Schema(
         vol.Optional(CONF_PROTOCOL, default=DEFAULT_PROTOCOL): vol.In(PROTOCOL_CHOICES),
         vol.Optional(CONF_USE_TLS, default=False): bool,
         vol.Optional(CONF_PASSWORD): str,
-        vol.Optional(CONF_TAGS, default=""): str,
+        vol.Optional(CONF_TAGS): TAGS_SELECTOR,
     }
 )
 
@@ -87,9 +92,12 @@ class S7ConfigFlow(ConfigFlow, domain=DOMAIN):
                     data[CONF_TAGS] = tags
                     return self.async_create_entry(title=f"S7 {host}", data=data)
 
+        # After an error, show the form again with what was entered, so a wrong
+        # port does not also cost the tag list (#61). The password is not echoed.
+        suggested = {k: v for k, v in (user_input or {}).items() if k != CONF_PASSWORD}
         return self.async_show_form(
             step_id="user",
-            data_schema=STEP_USER_SCHEMA,
+            data_schema=self.add_suggested_values_to_schema(STEP_USER_SCHEMA, suggested),
             errors=errors,
         )
 
@@ -160,7 +168,7 @@ class S7OptionsFlow(OptionsFlow):
         schema = vol.Schema(
             {
                 vol.Optional(CONF_SCAN_INTERVAL, default=current): vol.All(int, vol.Range(min=1)),
-                vol.Optional(CONF_TAGS, default="\n".join(current_tags)): str,
+                vol.Optional(CONF_TAGS, default="\n".join(current_tags)): TAGS_SELECTOR,
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema, errors=errors)

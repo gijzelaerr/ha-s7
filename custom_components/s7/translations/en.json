@@ -17,7 +17,8 @@
         "data_description": {
           "protocol": "Legacy: classic S7 (PUT/GET) for S7-300/400 and S7-1200/1500 with PUT/GET enabled. S7CommPlus: S7-1200/1500 where PUT/GET is disabled.",
           "rack": "Used by the legacy protocol only.",
-          "slot": "Used by the legacy protocol only."
+          "slot": "Used by the legacy protocol only.",
+          "tags": "One address per line (or separated by semicolons)."
         }
       }
     },

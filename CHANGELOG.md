@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- The tags field in setup and Configure is a multi-line box, so tags can be entered one per line, and a failed setup step keeps what was entered instead of clearing the tag list. (#63)
+
 ## [0.2.0] - 2026-11-08
 
 ### Fixed
