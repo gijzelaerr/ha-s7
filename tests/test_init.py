@@ -41,10 +41,10 @@ async def test_entry_setup_and_unload(hass: HomeAssistant, s7_server) -> None:
     assert entry.state is ConfigEntryState.LOADED
     assert isinstance(entry.runtime_data, S7Coordinator)
 
-    # Sensor entities should have been created for REAL and INT tags
+    # Sensor entities should have been created for REAL and INT tags, plus the CPU state
     states = [hass.states.get(s.entity_id) for s in hass.states.async_all("sensor")]
     sensor_values = {s.entity_id: s.state for s in states if s}
-    assert len(sensor_values) == 2  # REAL + INT
+    assert len(sensor_values) == 3  # REAL + INT + CPU state
 
     # Switch entity for the BOOL in DB area
     switches = hass.states.async_all("switch")
@@ -73,7 +73,7 @@ async def test_options_flow_edits_tags_and_removes_stale_entities(hass: HomeAssi
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
-    assert len(hass.states.async_all("sensor")) == 2
+    assert len(hass.states.async_all("sensor")) == 3  # two tags + CPU state
 
     result = await hass.config_entries.options.async_init(entry.entry_id)
     assert result["type"] == FlowResultType.FORM
@@ -85,7 +85,7 @@ async def test_options_flow_edits_tags_and_removes_stale_entities(hass: HomeAssi
     await hass.async_block_till_done()
     assert done["type"] == FlowResultType.CREATE_ENTRY
     assert entry.options[CONF_TAGS] == ["DB1.DBD0:REAL"]
-    assert len(hass.states.async_all("sensor")) == 1
+    assert len(hass.states.async_all("sensor")) == 2  # one tag + CPU state
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()

@@ -17,10 +17,11 @@ from custom_components.s7.const import (
 )
 
 _EXPECTED_METRICS = ("read_count", "write_count", "last_read_latency", "connected_since")
+_ENABLED_BY_DEFAULT = ("cpu_state",)
 
 
 async def test_diagnostic_sensors_registered(hass: HomeAssistant, s7_server) -> None:
-    """All four diagnostic sensors appear in the entity registry, disabled by default."""
+    """The diagnostic sensors appear in the entity registry; only the CPU state is enabled."""
     _srv, port, _ = s7_server
 
     entry = MockConfigEntry(
@@ -47,9 +48,11 @@ async def test_diagnostic_sensors_registered(hass: HomeAssistant, s7_server) -> 
         if re.config_entry_id == entry.entry_id and re.unique_id.startswith("127.0.0.1:") and "_diag_" in re.unique_id
     ]
     found_metrics = {re.unique_id.split("_diag_")[1] for re in diag_entries}
-    assert found_metrics == set(_EXPECTED_METRICS)
-    # Diagnostic-only sensors must not be enabled by default.
-    assert all(re.disabled_by is not None for re in diag_entries)
+    assert found_metrics == set(_EXPECTED_METRICS) | set(_ENABLED_BY_DEFAULT)
+    # The metrics must not be enabled by default; the CPU state is.
+    for re in diag_entries:
+        metric = re.unique_id.split("_diag_")[1]
+        assert (re.disabled_by is None) == (metric in _ENABLED_BY_DEFAULT), metric
 
     await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()

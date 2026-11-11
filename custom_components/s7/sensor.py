@@ -16,7 +16,7 @@ from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import CHAR_TYPES, DOMAIN, NUMERIC_TYPES, STRING_TYPES, TIME_TYPES, base_type
+from .const import CHAR_TYPES, CPU_STATE_RUN, CPU_STATE_STOP, DOMAIN, NUMERIC_TYPES, STRING_TYPES, TIME_TYPES, base_type
 from .coordinator import S7Coordinator
 from .entity import S7BaseEntity
 
@@ -87,7 +87,7 @@ async def async_setup_entry(
         if base_type(tag.datatype) in _SENSOR_TYPES:
             entities.append(S7Sensor(coordinator, raw))
 
-    # Diagnostic sensors (disabled by default; enable via Device settings).
+    # Diagnostic sensors (all but the CPU state are disabled by default; enable via Device settings).
     entities.extend(S7DiagnosticSensor(coordinator, description) for description in _DIAGNOSTIC_SENSORS)
     async_add_entities(entities)
 
@@ -130,18 +130,21 @@ class S7DiagnosticSensorDescription(SensorEntityDescription):
 _DIAGNOSTIC_SENSORS: tuple[S7DiagnosticSensorDescription, ...] = (
     S7DiagnosticSensorDescription(
         key="read_count",
+        entity_registry_enabled_default=False,
         name="Read count",
         state_class=SensorStateClass.TOTAL_INCREASING,
         value_fn=lambda coordinator: coordinator.read_count,
     ),
     S7DiagnosticSensorDescription(
         key="write_count",
+        entity_registry_enabled_default=False,
         name="Write count",
         state_class=SensorStateClass.TOTAL_INCREASING,
         value_fn=lambda coordinator: coordinator.write_count,
     ),
     S7DiagnosticSensorDescription(
         key="last_read_latency",
+        entity_registry_enabled_default=False,
         name="Last read latency",
         device_class=SensorDeviceClass.DURATION,
         native_unit_of_measurement=UnitOfTime.SECONDS,
@@ -151,24 +154,32 @@ _DIAGNOSTIC_SENSORS: tuple[S7DiagnosticSensorDescription, ...] = (
     ),
     S7DiagnosticSensorDescription(
         key="connected_since",
+        entity_registry_enabled_default=False,
         name="Connected since",
         device_class=SensorDeviceClass.TIMESTAMP,
         value_fn=lambda coordinator: coordinator.connected_since,
+    ),
+    S7DiagnosticSensorDescription(
+        key="cpu_state",
+        translation_key="cpu_state",
+        device_class=SensorDeviceClass.ENUM,
+        options=[CPU_STATE_RUN, CPU_STATE_STOP],
+        value_fn=lambda coordinator: coordinator.cpu_state,
     ),
 )
 
 
 class S7DiagnosticSensor(CoordinatorEntity[S7Coordinator], SensorEntity):
-    """Sensor that reports a coordinator metric (read count, latency, etc.).
+    """Sensor that reports something about the PLC connection itself.
 
-    Disabled by default — most users don't need to see them; operators can
-    enable them from the device page when debugging.
+    The counters and timings are disabled by default — most users don't need
+    to see them; operators can enable them from the device page when
+    debugging. The CPU state is enabled.
     """
 
     entity_description: S7DiagnosticSensorDescription
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: S7Coordinator, description: S7DiagnosticSensorDescription) -> None:
         super().__init__(coordinator)

@@ -100,6 +100,9 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._write_count = 0
         self._last_read_latency: float | None = None
         self._connected_since: datetime | None = None
+        # Operating state from the last poll; None when the PLC does not say.
+        self._cpu_state: str | None = None
+        self._cpu_state_refused = False
 
     @property
     def host(self) -> str:
@@ -145,6 +148,11 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Timestamp of the last successful (re)connect, or None if never connected."""
         return self._connected_since
 
+    @property
+    def cpu_state(self) -> str | None:
+        """The CPU's operating state at the last poll: ``"run"``, ``"stop"`` or None."""
+        return self._cpu_state
+
     async def async_connect(self) -> None:
         """Open the PLC connection (blocking; runs in executor)."""
         async with self._lock:
@@ -171,6 +179,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             if not self._client.connected:
                 self._blocking_connect()
             values = self._client.read_each(list(self._parsed_tags.values()))
+            self._cpu_state = self._read_cpu_state()
             return dict(zip(self._tag_strings, values, strict=True))
 
         async with self._lock:
@@ -189,6 +198,23 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                 raise UpdateFailed(f"The PLC could not read any of the configured tags: {next(iter(failed.values()))}")
             self._read_count += 1
             return {tag: value for tag, value in result.items() if tag not in failed}
+
+    def _read_cpu_state(self) -> str | None:
+        """Ask the PLC for its operating state; runs in the executor.
+
+        A PLC that refuses the question is not asked again until the entry is
+        reloaded, so it costs one request, not one per poll.
+        """
+        if self._cpu_state_refused:
+            return None
+        try:
+            return self._client.get_cpu_state()
+        except Exception as err:
+            if is_connection_error(err):
+                raise
+            self._cpu_state_refused = True
+            _LOGGER.info("%s does not report its CPU state, the CPU state sensor stays unknown: %s", self._host, err)
+            return None
 
     def _note_failed_tags(self, failed: dict[str, str]) -> None:
         """Log a tag when it starts failing and when it reads again, not every poll."""

@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- CPU state sensor per PLC, showing Run or Stop. It is unknown where the PLC does not report its state: an S7-1200 on S7CommPlus, or a classic CPU that refuses the query. Each poll sends one more request for it.
+
+### Changed
+- Requires `python-snap7` 3.5.0, the first version that reads the real CPU state.
+
 ## [0.3.0] - 2026-11-11
 
 ### Added

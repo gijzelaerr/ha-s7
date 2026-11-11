@@ -107,5 +107,16 @@
         }
       }
     }
+  },
+  "entity": {
+    "sensor": {
+      "cpu_state": {
+        "name": "CPU state",
+        "state": {
+          "run": "Run",
+          "stop": "Stop"
+        }
+      }
+    }
   }
 }

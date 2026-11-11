@@ -24,7 +24,7 @@ from snap7.client import Client as LegacyClient
 from snap7.tags import Tag, decode_tag, encode_tag
 from snap7.type import Area
 
-from .const import PROTOCOL_LEGACY, PROTOCOL_S7COMMPLUS
+from .const import CPU_STATE_RUN, CPU_STATE_STOP, PROTOCOL_LEGACY, PROTOCOL_S7COMMPLUS
 
 # Native object RIDs of the non-DB memory areas in S7CommPlus.
 _AREA_RIDS: dict[Area, int] = {
@@ -79,6 +79,12 @@ def is_connection_error(err: BaseException) -> bool:
     return isinstance(err, _CONNECTION_ERRORS)
 
 
+# What each library calls the operating states the sensor reports. Anything
+# else (python-snap7's "S7CpuStatusUnknown", s7commplus's "UNKNOWN") is None.
+_LEGACY_CPU_STATES = {"S7CpuStatusRun": CPU_STATE_RUN, "S7CpuStatusStop": CPU_STATE_STOP}
+_COMMPLUS_CPU_STATES = {"RUN": CPU_STATE_RUN, "STOP": CPU_STATE_STOP}
+
+
 class TagReadError(Exception):
     """Stands in for the value of a tag the PLC could not read."""
 
@@ -105,6 +111,10 @@ class PlcClient(Protocol):
         ...
 
     def write_tag(self, tag: Tag, value: Any) -> None: ...
+
+    def get_cpu_state(self) -> str | None:
+        """The CPU's operating state, ``"run"`` or ``"stop"``, or None if the PLC does not say."""
+        ...
 
 
 def _reject_symbolic(tag: Tag) -> None:
@@ -167,6 +177,10 @@ class LegacyPlcClient:
 
     def write_tag(self, tag: Tag, value: Any) -> None:
         self._client.write_tag(tag, value)
+
+    def get_cpu_state(self) -> str | None:
+        # Reads SZL 0x0424; python-snap7 before 3.5.0 always answered "run".
+        return _LEGACY_CPU_STATES.get(self._client.get_cpu_state())
 
 
 class CommPlusPlcClient:
@@ -259,6 +273,9 @@ class CommPlusPlcClient:
             self._client.db_write(tag.db_number, tag.byte_offset, bytes(buf), datatype)
         else:
             self._client.write_area(_AREA_RIDS[Area(tag.area)], tag.byte_offset, bytes(buf), datatype=datatype)
+
+    def get_cpu_state(self) -> str | None:
+        return _COMMPLUS_CPU_STATES.get(self._client.get_cpu_state())
 
 
 def create_client(
