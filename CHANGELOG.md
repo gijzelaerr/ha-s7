@@ -6,6 +6,11 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Numeric sensors have the measurement state class, so Home Assistant keeps long-term statistics for them and can graph them.
+- `TIME`, `LTIME` and `S5TIME` sensors are durations in seconds (`23.4` with unit `s`) instead of text such as `0:00:23.400000`. Automations that compare the old text need updating.
+- `DATE` sensors are dates, and `DT` and `DTL` sensors are timestamps. The PLC stores these without a time zone, so they are read as being in Home Assistant's time zone.
+
 ### Fixed
 - More than 20 tags on the classic S7 protocol no longer makes setup and every poll fail; the tags are read in groups of 20.
 - The tags field in setup and Configure is a multi-line box, so tags can be entered one per line, and a failed setup step keeps what was entered instead of clearing the tag list. (#63)

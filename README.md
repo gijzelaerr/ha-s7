@@ -29,6 +29,7 @@ Two wire protocols are supported, both pure Python with no native dependencies:
   | `DB`, `M`, `Q` | `STRING`, `WSTRING` | `sensor` + `text` (writable) |
   | `I`, or any area | numeric, `DATE`, `TIME`, … | `sensor` (read-only) |
 - **All S7 types** — `BOOL`, `BYTE`/`SINT`/`USINT`, `INT`/`UINT`/`WORD`, `DINT`/`UDINT`/`DWORD`, `REAL`, `LREAL`, `LINT`/`ULINT`, `STRING[n]`, `WSTRING[n]`, `DATE`, `TIME`, `TOD`, `DT`, `DTL`, `LDT`, `LTIME`, `LTOD`
+- **Sensors Home Assistant understands** — numeric sensors are measurements (so they get statistics and graphs), `TIME`/`LTIME`/`S5TIME` are durations in seconds, `DATE` is a date, and `DT`/`DTL` are timestamps. The PLC stores `DT` and `DTL` without a time zone; they are read as being in Home Assistant's time zone.
 - **Batched reads** — multi-variable requests on the legacy protocol and for DB tags on S7CommPlus (other S7CommPlus areas are read one at a time)
 - **TLS + password authentication** — S7CommPlus V2/V3 on S7-1200/1500
 - **Diagnostic sensors** — read/write counters, read latency and connected-since per PLC (disabled by default; enable them on the device page)

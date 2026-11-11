@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorEntityDescription, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
@@ -14,6 +14,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import CHAR_TYPES, DOMAIN, NUMERIC_TYPES, STRING_TYPES, TIME_TYPES, base_type
 from .coordinator import S7Coordinator
@@ -21,6 +22,55 @@ from .entity import S7BaseEntity
 
 # Every type but BOOL gets a sensor.
 _SENSOR_TYPES = NUMERIC_TYPES | STRING_TYPES | CHAR_TYPES | TIME_TYPES
+
+_DURATION_TYPES = frozenset({"TIME", "LTIME", "S5TIME"})
+_TIMESTAMP_TYPES = frozenset({"DT", "DTL"})
+
+
+def duration_seconds(value: object) -> float | None:
+    """Turn a decoded TIME, LTIME or S5TIME into seconds.
+
+    python-snap7 gives LTIME as a timedelta, TIME as ``[-]d:h:m:s.mmm`` and
+    S5TIME as ``h:mm:ss[.ffffff]``.
+    """
+    if isinstance(value, timedelta):
+        return value.total_seconds()
+    if not isinstance(value, str):
+        return None
+    negative = value.startswith("-")
+    try:
+        parts = [float(part) for part in value.lstrip("-").split(":")]
+    except ValueError:
+        return None
+    if len(parts) == 4:
+        days, hours, minutes, seconds = parts
+    elif len(parts) == 3:
+        days = 0.0
+        hours, minutes, seconds = parts
+    else:
+        return None
+    # Rounded to the microsecond, the finest step any of the three types has here.
+    total = round(days * 86400 + hours * 3600 + minutes * 60 + seconds, 6)
+    return -total if negative else total
+
+
+def local_timestamp(value: object) -> datetime | None:
+    """Turn a decoded DT or DTL into a datetime with a time zone.
+
+    The PLC stores wall-clock time without a zone (python-snap7 gives DT as an
+    ISO string and DTL as a naive datetime), and a timestamp sensor needs one,
+    so the value is taken to be in Home Assistant's time zone.
+    """
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value)
+        except ValueError:
+            return None
+    if not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=dt_util.get_default_time_zone())
+    return value
 
 
 async def async_setup_entry(
@@ -40,9 +90,29 @@ async def async_setup_entry(
 
 
 class S7Sensor(S7BaseEntity, SensorEntity):
+    """A tag as a sensor, with the device class and unit its type implies."""
+
+    def __init__(self, coordinator: S7Coordinator, tag: str) -> None:
+        super().__init__(coordinator, tag)
+        self._datatype = base_type(coordinator.parsed_tags[tag].datatype)
+        if self._datatype in NUMERIC_TYPES:
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+        elif self._datatype in _DURATION_TYPES:
+            self._attr_device_class = SensorDeviceClass.DURATION
+            self._attr_native_unit_of_measurement = UnitOfTime.SECONDS
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+        elif self._datatype == "DATE":
+            self._attr_device_class = SensorDeviceClass.DATE
+        elif self._datatype in _TIMESTAMP_TYPES:
+            self._attr_device_class = SensorDeviceClass.TIMESTAMP
+
     @property
-    def native_value(self):
+    def native_value(self) -> StateType | date | datetime:
         value = self._value()
+        if self._datatype in _DURATION_TYPES:
+            return duration_seconds(value)
+        if self._datatype in _TIMESTAMP_TYPES:
+            return local_timestamp(value)
         return value[:MAX_LENGTH_STATE_STATE] if isinstance(value, str) else value
 
 
