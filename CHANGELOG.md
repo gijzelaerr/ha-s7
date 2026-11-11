@@ -15,7 +15,6 @@ All notable changes to this project are documented here. The format follows
 - Configure reads the tags once before saving, so a wrong address is refused there instead of failing every poll afterwards.
 - The password field hides what is typed.
 - `s7.write_tag` and `s7.pulse_tag` are registered when the integration loads and stay registered while no PLC is loaded; calling one for an entry that is not loaded says so.
-### Changed
 - Numeric sensors have the measurement state class, so Home Assistant keeps long-term statistics for them and can graph them.
 - `TIME`, `LTIME` and `S5TIME` sensors are durations in seconds (`23.4` with unit `s`) instead of text such as `0:00:23.400000`. Automations that compare the old text need updating.
 - `DATE` sensors are dates, and `DT` and `DTL` sensors are timestamps. The PLC stores these without a time zone, so they are read as being in Home Assistant's time zone.
