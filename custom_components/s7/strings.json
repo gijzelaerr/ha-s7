@@ -62,7 +62,7 @@
         },
         "value": {
           "name": "Value",
-          "description": "The value to write."
+          "description": "The value to write, converted to the tag's datatype: true/false for BOOL, a whole number for integer types, any number for REAL and LREAL, text as typed for string types."
         }
       }
     },

@@ -18,7 +18,7 @@ write_tag:
         text:
     value:
       name: Value
-      description: The value to write (type must match the tag datatype).
+      description: "The value to write. It is converted to the tag's datatype: true/false or on/off for BOOL, a whole number for integer types, any number (also 1e-05) for REAL and LREAL, and text as typed for string types."
       required: true
       example: 42.5
       selector:
