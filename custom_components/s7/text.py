@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from homeassistant.components.text import TextEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, STRING_TYPES, WRITABLE_AREAS, base_type
+from .const import STRING_TYPES, WRITABLE_AREAS, base_type
 from .coordinator import S7Coordinator
 from .entity import S7BaseEntity
+
+if TYPE_CHECKING:
+    from . import S7ConfigEntry
 
 
 def _string_capacity(datatype: str) -> int | None:
@@ -25,10 +29,10 @@ def _string_capacity(datatype: str) -> int | None:
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: S7ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinator: S7Coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     entities: list[S7Text] = []
     for raw, tag in coordinator.parsed_tags.items():
         if base_type(tag.datatype) in STRING_TYPES and tag.area in WRITABLE_AREAS:

@@ -71,7 +71,7 @@ async def plc(hass: HomeAssistant) -> AsyncGenerator[Plc]:
 
 
 async def _refresh(hass: HomeAssistant, plc: Plc) -> None:
-    await hass.data[DOMAIN][plc.entry.entry_id].async_refresh()
+    await plc.entry.runtime_data.async_refresh()
     await hass.async_block_till_done()
 
 

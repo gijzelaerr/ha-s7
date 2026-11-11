@@ -25,7 +25,7 @@ async def _setup(hass: HomeAssistant, port: int, tags: list[str], **options) -> 
 async def test_saved_duplicate_still_sets_up(hass: HomeAssistant, s7_server) -> None:
     entry = await _setup(hass, s7_server[1], ["DB1.DBD0:REAL", "DB1.DBW4:INT", "DB1.DBD0:REAL"])
     assert entry.state is ConfigEntryState.LOADED
-    assert hass.data[DOMAIN][entry.entry_id].data == {"DB1.DBD0:REAL": 23.5, "DB1.DBW4:INT": 42}
+    assert entry.runtime_data.data == {"DB1.DBD0:REAL": 23.5, "DB1.DBW4:INT": 42}
     await hass.config_entries.async_unload(entry.entry_id)
 
 

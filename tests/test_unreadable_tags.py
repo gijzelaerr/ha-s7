@@ -75,7 +75,7 @@ async def test_missing_db_leaves_the_other_tags_available(
 ) -> None:
     server = request.getfixturevalue("s7_server" if protocol == PROTOCOL_LEGACY else "s7commplus_server")
     entry = await _setup(hass, server[1], [REAL, MISSING, INT, BOOL], protocol)
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
 
     assert coordinator.last_update_success
     assert float(_states(hass, entry, REAL)["sensor"]) == 23.5
@@ -101,7 +101,7 @@ async def test_missing_db_leaves_the_other_tags_available(
 async def test_tag_comes_back_when_its_db_appears(hass: HomeAssistant, s7_server) -> None:
     server, port, _db1 = s7_server
     entry = await _setup(hass, port, [INT, MISSING], PROTOCOL_LEGACY)
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     assert _unavailable(hass, entry, MISSING)
 
     db99 = bytearray(b"\x00\x07" + bytes(8))
@@ -118,7 +118,7 @@ async def test_tag_comes_back_when_its_db_appears(hass: HomeAssistant, s7_server
 
 async def test_poll_fails_when_no_tag_can_be_read(hass: HomeAssistant, s7_server) -> None:
     entry = await _setup(hass, s7_server[1], [INT], PROTOCOL_LEGACY)
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     coordinator._parsed_tags[INT].db_number = 98  # the block is gone from the PLC
 
     await coordinator.async_refresh()

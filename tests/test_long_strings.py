@@ -52,7 +52,7 @@ async def test_long_value_is_clipped_in_both_entities(hass: HomeAssistant) -> No
             if e.domain == domain and "diag" not in e.unique_id
         )
         assert hass.states.get(entity_id).state == "x" * 255
-    assert hass.data[DOMAIN][entry.entry_id].data[tag] == "x" * 300
+    assert entry.runtime_data.data[tag] == "x" * 300
     await hass.config_entries.async_unload(entry.entry_id)
     server.stop()
     server.destroy()

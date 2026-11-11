@@ -74,7 +74,7 @@ async def test_diagnostic_metrics_update_on_read_write(hass: HomeAssistant, s7_s
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     baseline_reads = coordinator.read_count
 
     await coordinator.async_refresh()

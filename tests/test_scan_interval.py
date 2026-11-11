@@ -54,5 +54,5 @@ async def test_options_form_still_serializes(hass: HomeAssistant, s7_server) -> 
 
 async def test_saved_negative_interval_uses_the_default(hass: HomeAssistant, s7_server) -> None:
     entry = await _setup(hass, s7_server[1], [TAG], **{CONF_SCAN_INTERVAL: -5})
-    assert hass.data[DOMAIN][entry.entry_id].update_interval == DEFAULT_SCAN_INTERVAL
+    assert entry.runtime_data.update_interval == DEFAULT_SCAN_INTERVAL
     await hass.config_entries.async_unload(entry.entry_id)
