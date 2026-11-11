@@ -8,6 +8,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 - Reconfigure: host, port, rack, slot, protocol, TLS and password of a PLC can be changed without removing it. Entities, their IDs and their history are kept.
+- Diagnostics download with the entry configuration (password redacted), the tag list and the coordinator's read and write counters.
 
 ### Changed
 - Setup tells a PLC that cannot be reached apart from a tag that cannot be read, and names the tag.
