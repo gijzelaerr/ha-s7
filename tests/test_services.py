@@ -6,7 +6,8 @@ import asyncio
 
 import pytest
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.s7.const import (
@@ -95,3 +96,32 @@ async def test_pulse_tag_service_toggles_bit(hass: HomeAssistant, loaded_entry) 
     # After the pulse: bit should be False.
     await coordinator.async_refresh()
     assert coordinator.data["DB2.DBX0.0:BOOL"] is False
+
+
+async def test_services_exist_without_an_entry(hass: HomeAssistant) -> None:
+    """The services are registered by the integration, not by a config entry."""
+    assert await async_setup_component(hass, DOMAIN, {})
+    assert hass.services.has_service(DOMAIN, "write_tag")
+    assert hass.services.has_service(DOMAIN, "pulse_tag")
+
+
+async def test_services_stay_after_the_last_unload(hass: HomeAssistant, loaded_entry) -> None:
+    """Unloading the only entry keeps the services; calling one names the problem."""
+    assert await hass.config_entries.async_unload(loaded_entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass.services.has_service(DOMAIN, "write_tag")
+    assert hass.services.has_service(DOMAIN, "pulse_tag")
+    with pytest.raises(HomeAssistantError, match="not loaded"):
+        await hass.services.async_call(
+            DOMAIN,
+            "write_tag",
+            {"entry_id": loaded_entry.entry_id, "tag": "DB2.DBX0.0:BOOL", "value": "true"},
+            blocking=True,
+        )
+
+
+async def test_service_refuses_an_entry_of_another_integration(hass: HomeAssistant, loaded_entry) -> None:
+    other = MockConfigEntry(domain="other")
+    other.add_to_hass(hass)
+    with pytest.raises(ServiceValidationError, match="No s7 config entry"):
+        await hass.services.async_call(DOMAIN, "pulse_tag", {"entry_id": other.entry_id, "tag": "DB2.DBX0.0:BOOL"}, blocking=True)

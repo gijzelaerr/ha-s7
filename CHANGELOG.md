@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- `s7.write_tag` and `s7.pulse_tag` are registered when the integration loads and stay registered while no PLC is loaded; calling one for an entry that is not loaded says so.
+
 ### Fixed
 - A tag the PLC cannot read, such as one in a data block that does not exist, makes only its own entities unavailable instead of all of them. The tag is logged once, and again when it can be read.
 - A failed poll no longer holds up writes and service calls for 1 to 10 seconds; the connection is closed at once and the next poll or write opens a new one. A write that fails because the connection was lost closes it too.

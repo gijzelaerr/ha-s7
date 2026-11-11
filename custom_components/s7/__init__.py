@@ -8,8 +8,10 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.typing import ConfigType
 
 from .const import (
     CONF_HOST,
@@ -31,11 +33,19 @@ from .const import (
     plc_id,
 )
 from .coordinator import S7Coordinator
-from .services import async_setup_services, async_unload_services
+from .services import async_setup_services
 
 _LOGGER = logging.getLogger(__name__)
 
 type S7ConfigEntry = ConfigEntry[S7Coordinator]
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the services, which exist whether or not a PLC is set up."""
+    async_setup_services(hass)
+    return True
 
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -96,7 +106,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: S7ConfigEntry) -> bool:
 
     _async_remove_stale_entities(hass, entry, coordinator)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    await async_setup_services(hass)
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     return True
@@ -118,7 +127,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: S7ConfigEntry) -> bool:
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id, None)  # Bridge: see async_setup_entry
         await entry.runtime_data.async_disconnect()
-        await async_unload_services(hass)
     return unload_ok
 
 

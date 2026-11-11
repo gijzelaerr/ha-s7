@@ -1,6 +1,6 @@
 """Service handlers for the s7 integration.
 
-Exposes two global services:
+Exposes two global services, registered once when the integration is set up:
 
 - ``s7.write_tag`` — write a value to any tag on a given PLC.
 - ``s7.pulse_tag`` — write True, wait ``duration`` seconds, write False
@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 import probatio as vol
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
@@ -83,10 +83,9 @@ def _coerce_value(raw: Any, datatype: str) -> Any:
         return raw
 
 
-async def async_setup_services(hass: HomeAssistant) -> None:
-    """Register the s7 service handlers. Safe to call multiple times."""
-    if hass.services.has_service(DOMAIN, SERVICE_WRITE_TAG):
-        return
+@callback
+def async_setup_services(hass: HomeAssistant) -> None:
+    """Register the s7 service handlers. Called once, from ``async_setup``."""
 
     async def _write_tag(call: ServiceCall) -> None:
         coordinator = _get_coordinator(hass, call.data["entry_id"])
@@ -101,11 +100,3 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
     hass.services.async_register(DOMAIN, SERVICE_WRITE_TAG, _write_tag, schema=_WRITE_TAG_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_PULSE_TAG, _pulse_tag, schema=_PULSE_TAG_SCHEMA)
-
-
-async def async_unload_services(hass: HomeAssistant) -> None:
-    """Remove services when the last config entry unloads."""
-    if not hass.config_entries.async_loaded_entries(DOMAIN):
-        for name in (SERVICE_WRITE_TAG, SERVICE_PULSE_TAG):
-            if hass.services.has_service(DOMAIN, name):
-                hass.services.async_remove(DOMAIN, name)
