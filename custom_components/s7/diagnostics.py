@@ -43,6 +43,8 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: S7Confi
             "update_interval_seconds": update_interval.total_seconds() if update_interval else None,
             "last_update_success": coordinator.last_update_success,
             "last_exception": repr(coordinator.last_exception) if coordinator.last_exception else None,
+            # Tags the PLC refused on the last poll, once the coordinator tracks them.
+            "failed_tags": dict(getattr(coordinator, "failed_tags", {})),
             "read_count": coordinator.read_count,
             "write_count": coordinator.write_count,
             "last_read_latency_seconds": coordinator.last_read_latency,

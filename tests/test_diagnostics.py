@@ -56,6 +56,7 @@ async def test_diagnostics(hass: HomeAssistant, s7_server) -> None:
     assert counters["update_interval_seconds"] == 15
     assert counters["last_update_success"] is True
     assert counters["last_exception"] is None
+    assert counters["failed_tags"] == {}
     assert counters["read_count"] >= 1
     assert counters["write_count"] == 1
     assert counters["last_read_latency_seconds"] >= 0
