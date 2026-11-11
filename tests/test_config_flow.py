@@ -19,6 +19,7 @@ from custom_components.s7.const import (
     CONF_TAGS,
     DOMAIN,
 )
+from custom_components.s7.plc import LegacyPlcClient
 
 
 async def test_user_flow_success(hass: HomeAssistant, s7_server) -> None:
@@ -299,3 +300,25 @@ async def test_options_flow_tags_can_be_cleared(hass: HomeAssistant, s7_server) 
     assert entry.options[CONF_TAGS] == []
     assert entry.runtime_data.tags == []
     await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_connection_lost_during_the_test_read_is_not_blamed_on_tags(hass: HomeAssistant, s7_server) -> None:
+    """The PLC goes away after the first failed read: that is a connection error."""
+    server, port, _db1 = s7_server
+    read_tags = LegacyPlcClient.read_tags
+
+    def read_then_lose_the_plc(self: LegacyPlcClient, tags: list) -> list:
+        try:
+            return read_tags(self, tags)
+        finally:
+            self.disconnect()
+            server.stop()
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(LegacyPlcClient, "read_tags", read_then_lose_the_plc)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_HOST: "127.0.0.1", CONF_RACK: 0, CONF_SLOT: 0, CONF_PORT: port, CONF_TAGS: "DB1.DBD0:REAL\nDB99.DBD0:REAL"},
+        )
+    assert result["errors"] == {"base": "cannot_connect"}

@@ -100,9 +100,13 @@ def _blocking_test_read(connection: Mapping[str, Any], tags: list[str]) -> tuple
         # own to find the ones the PLC refuses.
         failed: list[str] = []
         for name, tag in parsed.items():
-            try:
-                if not client.connected:  # a refused read can end the session
+            if not client.connected:  # a refused read can end the session
+                try:
                     client.connect()
+                except Exception as err:  # the PLC is gone: not the fault of a tag
+                    _LOGGER.warning("PLC connection was lost during the test read: %s", err)
+                    return "cannot_connect", ""
+            try:
                 client.read_tags([tag])
             except Exception as err:
                 _LOGGER.warning("PLC test read of %s failed: %s", name, err)
