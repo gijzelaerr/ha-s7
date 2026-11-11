@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from ctypes import c_char
 from datetime import timedelta
 
 from homeassistant.core import HomeAssistant
+from snap7.type import SrvArea
 
 from custom_components.s7.coordinator import S7Coordinator, parse_tags
 
@@ -155,3 +157,39 @@ def test_parse_tags_rejects_arrays() -> None:
 
     with pytest.raises(ValueError, match="array tags are not supported"):
         parse_tags(["DB1.DBD0:REAL[5]"])
+
+
+async def test_coordinator_reads_more_than_twenty_tags(hass: HomeAssistant, s7_server) -> None:
+    """A tag list longer than one python-snap7 request is read in full, in order."""
+    server, port, db1 = s7_server
+    for offset in range(10, 55):
+        db1[offset] = offset
+    # The server copies an area when it is registered, so register it again.
+    server.register_area(SrvArea.DB, 1, (c_char * len(db1)).from_buffer(db1))
+
+    tags = ["DB1.DBW4:INT", *(f"DB1.DBB{offset}:BYTE" for offset in range(10, 55)), "DB1.DBD0:REAL"]
+    coordinator = S7Coordinator(
+        hass,
+        host="127.0.0.1",
+        rack=0,
+        slot=0,
+        port=port,
+        password=None,
+        use_tls=False,
+        tags=tags,
+        scan_interval=timedelta(seconds=60),
+    )
+
+    await coordinator.async_connect()
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert coordinator.last_update_success
+    data = coordinator.data or {}
+    assert len(data) == 47
+    assert data["DB1.DBW4:INT"] == 42
+    for offset in range(10, 55):
+        assert data[f"DB1.DBB{offset}:BYTE"] == offset
+    assert abs(data["DB1.DBD0:REAL"] - 23.5) < 0.01
+
+    await coordinator.async_disconnect()
