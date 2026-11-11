@@ -6,9 +6,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Reconfigure: host, port, rack, slot, protocol, TLS and password of a PLC can be changed without removing it. Entities, their IDs and their history are kept.
+- Diagnostics download with the entry configuration (password redacted), the tag list and the coordinator's read and write counters.
+
+### Changed
+- Setup tells a PLC that cannot be reached apart from a tag that cannot be read, and names the tag.
+- Configure reads the tags once before saving, so a wrong address is refused there instead of failing every poll afterwards.
+- The password field hides what is typed.
+- `s7.write_tag` and `s7.pulse_tag` are registered when the integration loads and stay registered while no PLC is loaded; calling one for an entry that is not loaded says so.
+
 ### Fixed
 - A tag the PLC cannot read, such as one in a data block that does not exist, makes only its own entities unavailable instead of all of them. The tag is logged once, and again when it can be read.
 - A failed poll no longer holds up writes and service calls for 1 to 10 seconds; the connection is closed at once and the next poll or write opens a new one. A write that fails because the connection was lost closes it too.
+- The tag list in Configure can be emptied; the previous tags were filled back in.
+- `write_tag` converts the value to the tag's datatype. A float such as `1e-05` was written as text and failed, and booleans and numbers from YAML or a template were turned into text first. A value that does not fit the type, such as `1.5` for an INT, is refused with a clear error.
 - More than 20 tags on the classic S7 protocol no longer makes setup and every poll fail; the tags are read in groups of 20.
 - The tags field in setup and Configure is a multi-line box, so tags can be entered one per line, and a failed setup step keeps what was entered instead of clearing the tag list. (#63)
 

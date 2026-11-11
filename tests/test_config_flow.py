@@ -2,19 +2,24 @@
 
 from __future__ import annotations
 
+import pytest
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers.selector import TextSelector
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.s7.const import (
     CONF_HOST,
     CONF_PASSWORD,
     CONF_PORT,
+    CONF_PROTOCOL,
     CONF_RACK,
     CONF_SLOT,
     CONF_TAGS,
     DOMAIN,
 )
+from custom_components.s7.plc import LegacyPlcClient
 
 
 async def test_user_flow_success(hass: HomeAssistant, s7_server) -> None:
@@ -202,6 +207,118 @@ async def test_options_flow_tags_field_is_multiline(hass: HomeAssistant, s7_serv
     await hass.async_block_till_done()
     options = await hass.config_entries.options.async_init(result["result"].entry_id)
     assert _tags_selector(options).config["multiline"] is True
-    default = next(key.default() for key in options["data_schema"].schema if str(key) == CONF_TAGS)
-    assert default == "DB1.DBD0:REAL\nDB1.DBW4:INT"
+    assert _suggested(options)[CONF_TAGS] == "DB1.DBD0:REAL\nDB1.DBW4:INT"
     await hass.config_entries.async_unload(result["result"].entry_id)
+
+
+async def test_password_field_is_masked(hass: HomeAssistant) -> None:
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    selector = next(value for key, value in result["data_schema"].schema.items() if str(key) == CONF_PASSWORD)
+    assert isinstance(selector, TextSelector)
+    assert selector.config["type"] == "password"
+
+
+@pytest.mark.parametrize("protocol", ["legacy", "s7commplus"])
+async def test_user_flow_names_the_tag_that_cannot_be_read(
+    hass: HomeAssistant, s7_server, s7commplus_server, protocol: str
+) -> None:
+    """The PLC answers, but one tag is in a data block it does not have."""
+    port = s7_server[1] if protocol == "legacy" else s7commplus_server[1]
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {
+            CONF_HOST: "127.0.0.1",
+            CONF_RACK: 0,
+            CONF_SLOT: 0,
+            CONF_PORT: port,
+            CONF_PROTOCOL: protocol,
+            CONF_TAGS: "DB1.DBD0:REAL\nDB99.DBD0:REAL\nDB1.DBW4:INT",
+        },
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {"base": "cannot_read_tag"}
+    assert result["description_placeholders"] == {"tag": "DB99.DBD0:REAL"}
+
+
+async def _loaded_entry(hass: HomeAssistant, port: int, tags: list[str]) -> MockConfigEntry:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={CONF_HOST: "127.0.0.1", CONF_RACK: 0, CONF_SLOT: 0, CONF_PORT: port, CONF_TAGS: tags},
+        unique_id=f"127.0.0.1:{port}:0:0",
+        minor_version=2,
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    return entry
+
+
+async def test_options_flow_refuses_a_tag_that_cannot_be_read(hass: HomeAssistant, s7_server) -> None:
+    """Configure reads the new tags before saving and names the one that fails."""
+    entry = await _loaded_entry(hass, s7_server[1], ["DB1.DBD0:REAL"])
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    tags = "DB1.DBD0:REAL\nDB99.DBW0:INT"
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"scan_interval": 30, CONF_TAGS: tags})
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {"base": "cannot_read_tag"}
+    assert result["description_placeholders"] == {"tag": "DB99.DBW0:INT"}
+    assert _suggested(result)[CONF_TAGS] == tags
+    assert CONF_TAGS not in entry.options
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"scan_interval": 30, CONF_TAGS: "DB1.DBD0:REAL\nDB1.DBW4:INT"}
+    )
+    await hass.async_block_till_done()
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_TAGS] == ["DB1.DBD0:REAL", "DB1.DBW4:INT"]
+    await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_options_flow_cannot_connect(hass: HomeAssistant, s7_server) -> None:
+    """With the PLC gone the tags cannot be checked, so nothing is saved."""
+    server, port, _db1 = s7_server
+    entry = await _loaded_entry(hass, port, ["DB1.DBD0:REAL"])
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    await hass.config_entries.async_unload(entry.entry_id)
+    server.stop()
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"scan_interval": 30, CONF_TAGS: "DB1.DBW4:INT"}
+    )
+    assert result["type"] == FlowResultType.FORM
+    assert result["errors"] == {"base": "cannot_connect"}
+    assert CONF_TAGS not in entry.options
+
+
+async def test_options_flow_tags_can_be_cleared(hass: HomeAssistant, s7_server) -> None:
+    """An emptied tag box arrives without the field; that removes every tag."""
+    entry = await _loaded_entry(hass, s7_server[1], ["DB1.DBD0:REAL", "DB1.DBW4:INT"])
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"scan_interval": 30})
+    await hass.async_block_till_done()
+    assert result["type"] == FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_TAGS] == []
+    assert entry.runtime_data.tags == []
+    await hass.config_entries.async_unload(entry.entry_id)
+
+
+async def test_connection_lost_during_the_test_read_is_not_blamed_on_tags(hass: HomeAssistant, s7_server) -> None:
+    """The PLC goes away after the first failed read: that is a connection error."""
+    server, port, _db1 = s7_server
+    read_tags = LegacyPlcClient.read_tags
+
+    def read_then_lose_the_plc(self: LegacyPlcClient, tags: list) -> list:
+        try:
+            return read_tags(self, tags)
+        finally:
+            self.disconnect()
+            server.stop()
+
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": config_entries.SOURCE_USER})
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(LegacyPlcClient, "read_tags", read_then_lose_the_plc)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_HOST: "127.0.0.1", CONF_RACK: 0, CONF_SLOT: 0, CONF_PORT: port, CONF_TAGS: "DB1.DBD0:REAL\nDB99.DBD0:REAL"},
+        )
+    assert result["errors"] == {"base": "cannot_connect"}
