@@ -6,26 +6,28 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-11
+
 ### Added
-- Reconfigure: host, port, rack, slot, protocol, TLS and password of a PLC can be changed without removing it. Entities, their IDs and their history are kept.
-- Diagnostics download with the entry configuration (password redacted), the tag list and the coordinator's read and write counters.
+- Reconfigure: host, port, rack, slot, protocol, TLS and password of a PLC can be changed without removing it. Entities, their IDs and their history are kept. (#66)
+- Diagnostics download with the entry configuration (password redacted), the tag list and the coordinator's read and write counters. (#66)
 
 ### Changed
-- Setup tells a PLC that cannot be reached apart from a tag that cannot be read, and names the tag.
-- Configure reads the tags once before saving, so a wrong address is refused there instead of failing every poll afterwards.
-- The password field hides what is typed.
-- `s7.write_tag` and `s7.pulse_tag` are registered when the integration loads and stay registered while no PLC is loaded; calling one for an entry that is not loaded says so.
-- Numeric sensors have the measurement state class, so Home Assistant keeps long-term statistics for them and can graph them.
-- `TIME`, `LTIME` and `S5TIME` sensors are durations in seconds (`23.4` with unit `s`) instead of text such as `0:00:23.400000`. Automations that compare the old text need updating.
-- `DATE` sensors are dates, and `DT` and `DTL` sensors are timestamps. The PLC stores these without a time zone, so they are read as being in Home Assistant's time zone.
-- HACS states the real minimum Home Assistant version, 2026.9.0. The integration has imported `probatio` since 0.1.3, and Home Assistant ships it from 2026.9.0 on, so older versions could not load it.
+- Setup tells a PLC that cannot be reached apart from a tag that cannot be read, and names the tag. (#66)
+- Configure reads the tags once before saving, so a wrong address is refused there instead of failing every poll afterwards. (#66)
+- The password field hides what is typed. (#66)
+- `s7.write_tag` and `s7.pulse_tag` are registered when the integration loads and stay registered while no PLC is loaded; calling one for an entry that is not loaded says so. (#66)
+- Numeric sensors have the measurement state class, so Home Assistant keeps long-term statistics for them and can graph them. (#68)
+- `TIME`, `LTIME` and `S5TIME` sensors are durations in seconds (`23.4` with unit `s`) instead of text such as `0:00:23.400000`. Automations that compare the old text need updating. (#68)
+- `DATE` sensors are dates, and `DT` and `DTL` sensors are timestamps. The PLC stores these without a time zone, so they are read as being in Home Assistant's time zone. (#68)
+- HACS states the real minimum Home Assistant version, 2026.9.0. The integration has imported `probatio` since 0.1.3, and Home Assistant ships it from 2026.9.0 on, so older versions could not load it. (#68)
 
 ### Fixed
-- A tag the PLC cannot read, such as one in a data block that does not exist, makes only its own entities unavailable instead of all of them. The tag is logged once, and again when it can be read.
-- A failed poll no longer holds up writes and service calls for 1 to 10 seconds; the connection is closed at once and the next poll or write opens a new one. A write that fails because the connection was lost closes it too.
-- The tag list in Configure can be emptied; the previous tags were filled back in.
-- `write_tag` converts the value to the tag's datatype. A float such as `1e-05` was written as text and failed, and booleans and numbers from YAML or a template were turned into text first. A value that does not fit the type, such as `1.5` for an INT, is refused with a clear error.
-- More than 20 tags on the classic S7 protocol no longer makes setup and every poll fail; the tags are read in groups of 20.
+- A tag the PLC cannot read, such as one in a data block that does not exist, makes only its own entities unavailable instead of all of them. The tag is logged once, and again when it can be read. (#65)
+- A failed poll no longer holds up writes and service calls for 1 to 10 seconds; the connection is closed at once and the next poll or write opens a new one. A write that fails because the connection was lost closes it too. (#65)
+- The tag list in Configure can be emptied; the previous tags were filled back in. (#66)
+- `write_tag` converts the value to the tag's datatype. A float such as `1e-05` was written as text and failed, and booleans and numbers from YAML or a template were turned into text first. A value that does not fit the type, such as `1.5` for an INT, is refused with a clear error. (#66)
+- More than 20 tags on the classic S7 protocol no longer makes setup and every poll fail; the tags are read in groups of 20. (#64)
 - The tags field in setup and Configure is a multi-line box, so tags can be entered one per line, and a failed setup step keeps what was entered instead of clearing the tag list. (#63)
 
 ## [0.2.0] - 2026-11-08
@@ -94,7 +96,8 @@ First release.
 - S7CommPlus has only been tested against an emulator, not a physical PLC. TLS and password authentication, and the M/I/Q areas over S7CommPlus, are untested.
 - Tags use absolute byte-offset addressing. On S7-1200/1500, data blocks must have "Optimized block access" turned off; symbolic access to optimized blocks is not implemented.
 
-[Unreleased]: https://github.com/gijzelaerr/ha-s7/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/gijzelaerr/ha-s7/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/gijzelaerr/ha-s7/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.2...v0.1.3
