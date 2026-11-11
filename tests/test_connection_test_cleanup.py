@@ -36,5 +36,5 @@ async def test_failed_read_closes_the_connection(
             CONF_TAGS: "DB99.DBD0:REAL",
         },
     )
-    assert result["errors"] == {"base": "cannot_connect"}
+    assert result["errors"] == {"base": "cannot_read_tag"}
     assert not clients[0].connected

@@ -23,7 +23,8 @@
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to the PLC. Check host, port, protocol, rack/slot and tag addresses. On S7-1200/1500 the data blocks must have 'Optimized block access' turned off, and the legacy protocol needs PUT/GET to be permitted.",
+      "cannot_connect": "Could not connect to the PLC. Check host, port, protocol and rack/slot. On S7-1200/1500 the legacy protocol needs PUT/GET to be permitted.",
+      "cannot_read_tag": "Connected to the PLC, but could not read: {tag}. Check that the address exists and the data block is long enough. On S7-1200/1500 the data block must have 'Optimized block access' turned off.",
       "invalid_tags": "One or more tag addresses could not be parsed, or are arrays (not supported). Check the syntax."
     },
     "abort": {
@@ -39,11 +40,13 @@
           "tags": "Tags"
         },
         "data_description": {
-          "tags": "One address per line (or separated by semicolons). Saving reloads the integration and deletes entities of removed tags."
+          "tags": "One address per line (or separated by semicolons). The tags are read once before saving. Saving reloads the integration and deletes entities of removed tags."
         }
       }
     },
     "error": {
+      "cannot_connect": "Could not connect to the PLC to check the tags, so nothing was saved.",
+      "cannot_read_tag": "Connected to the PLC, but could not read: {tag}. Check that the address exists and the data block is long enough. On S7-1200/1500 the data block must have 'Optimized block access' turned off.",
       "invalid_tags": "One or more tag addresses could not be parsed, or are arrays (not supported). Check the syntax."
     }
   },
