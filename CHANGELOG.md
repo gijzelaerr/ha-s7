@@ -10,6 +10,7 @@ All notable changes to this project are documented here. The format follows
 - Numeric sensors have the measurement state class, so Home Assistant keeps long-term statistics for them and can graph them.
 - `TIME`, `LTIME` and `S5TIME` sensors are durations in seconds (`23.4` with unit `s`) instead of text such as `0:00:23.400000`. Automations that compare the old text need updating.
 - `DATE` sensors are dates, and `DT` and `DTL` sensors are timestamps. The PLC stores these without a time zone, so they are read as being in Home Assistant's time zone.
+- HACS states the real minimum Home Assistant version, 2026.9.0. The integration has imported `probatio` since 0.1.3, and Home Assistant ships it from 2026.9.0 on, so older versions could not load it.
 
 ### Fixed
 - More than 20 tags on the classic S7 protocol no longer makes setup and every poll fail; the tags are read in groups of 20.
