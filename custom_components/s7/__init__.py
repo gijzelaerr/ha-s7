@@ -6,7 +6,7 @@ import logging
 from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
@@ -48,24 +48,27 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
+@callback
+def async_move_plc_id(hass: HomeAssistant, entry: ConfigEntry, old_id: str, new_id: str) -> None:
+    """Rename the unique IDs and the device of a PLC, so its entities survive a new id."""
+    registry = er.async_get(hass)
+    for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if entity.unique_id.startswith(f"{old_id}_"):
+            new_unique_id = f"{new_id}_{entity.unique_id.removeprefix(f'{old_id}_')}"
+            registry.async_update_entity(entity.entity_id, new_unique_id=new_unique_id)
+    devices = dr.async_get(hass)
+    for device in dr.async_entries_for_config_entry(devices, entry.entry_id):
+        if (DOMAIN, old_id) in device.identifiers:
+            devices.async_update_device(device.id, new_identifiers={(DOMAIN, new_id)})
+
+
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Move unique IDs and the device from the host name to the full PLC id."""
     if entry.version > 1:
         return False
     if entry.minor_version < 2:
-        host = entry.data[CONF_HOST]
         new_id = plc_id(entry.data)
-
-        def _new_unique_id(entity: er.RegistryEntry) -> dict[str, str] | None:
-            if not entity.unique_id.startswith(f"{host}_"):
-                return None
-            return {"new_unique_id": f"{new_id}_{entity.unique_id.removeprefix(f'{host}_')}"}
-
-        await er.async_migrate_entries(hass, entry.entry_id, _new_unique_id)
-        devices = dr.async_get(hass)
-        for device in dr.async_entries_for_config_entry(devices, entry.entry_id):
-            if (DOMAIN, host) in device.identifiers:
-                devices.async_update_device(device.id, new_identifiers={(DOMAIN, new_id)})
+        async_move_plc_id(hass, entry, entry.data[CONF_HOST], new_id)
         hass.config_entries.async_update_entry(entry, unique_id=new_id, minor_version=2)
     return True
 

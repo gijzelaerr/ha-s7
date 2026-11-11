@@ -20,6 +20,25 @@
           "slot": "Used by the legacy protocol only.",
           "tags": "One address per line (or separated by semicolons)."
         }
+      },
+      "reconfigure": {
+        "title": "Change the PLC connection",
+        "description": "Change how the PLC is reached. The tags and their entities are kept. The connection is tested with the configured tags before anything is saved.",
+        "data": {
+          "host": "Host",
+          "rack": "Rack",
+          "slot": "Slot",
+          "port": "TCP port",
+          "protocol": "Protocol",
+          "use_tls": "Use TLS (S7CommPlus V2/V3 only)",
+          "password": "PLC password (S7CommPlus only, optional)"
+        },
+        "data_description": {
+          "protocol": "Legacy: classic S7 (PUT/GET) for S7-300/400 and S7-1200/1500 with PUT/GET enabled. S7CommPlus: S7-1200/1500 where PUT/GET is disabled.",
+          "rack": "Used by the legacy protocol only.",
+          "slot": "Used by the legacy protocol only.",
+          "password": "Empty this field to remove the stored password."
+        }
       }
     },
     "error": {
@@ -28,7 +47,8 @@
       "invalid_tags": "One or more tag addresses could not be parsed, or are arrays (not supported). Check the syntax."
     },
     "abort": {
-      "already_configured": "This PLC is already configured."
+      "already_configured": "This PLC is already configured.",
+      "reconfigure_successful": "The connection settings were saved."
     }
   },
   "options": {

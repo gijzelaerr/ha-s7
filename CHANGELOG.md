@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Reconfigure: host, port, rack, slot, protocol, TLS and password of a PLC can be changed without removing it. Entities, their IDs and their history are kept.
+
 ### Changed
 - Setup tells a PLC that cannot be reached apart from a tag that cannot be read, and names the tag.
 - Configure reads the tags once before saving, so a wrong address is refused there instead of failing every poll afterwards.

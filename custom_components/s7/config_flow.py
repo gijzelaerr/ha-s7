@@ -12,6 +12,7 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResu
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
 
+from . import async_move_plc_id
 from .const import (
     CONF_HOST,
     CONF_PASSWORD,
@@ -41,18 +42,19 @@ _LOGGER = logging.getLogger(__name__)
 TAGS_SELECTOR = TextSelector(TextSelectorConfig(multiline=True))
 PASSWORD_SELECTOR = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
 
-STEP_USER_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_HOST): str,
-        vol.Optional(CONF_RACK, default=DEFAULT_RACK): int,
-        vol.Optional(CONF_SLOT, default=DEFAULT_SLOT): int,
-        vol.Optional(CONF_PORT, default=DEFAULT_PORT): int,
-        vol.Optional(CONF_PROTOCOL, default=DEFAULT_PROTOCOL): vol.In(PROTOCOL_CHOICES),
-        vol.Optional(CONF_USE_TLS, default=False): bool,
-        vol.Optional(CONF_PASSWORD): PASSWORD_SELECTOR,
-        vol.Optional(CONF_TAGS): TAGS_SELECTOR,
-    }
-)
+_CONNECTION_FIELDS: dict[vol.Marker, Any] = {
+    vol.Required(CONF_HOST): str,
+    vol.Optional(CONF_RACK, default=DEFAULT_RACK): int,
+    vol.Optional(CONF_SLOT, default=DEFAULT_SLOT): int,
+    vol.Optional(CONF_PORT, default=DEFAULT_PORT): int,
+    vol.Optional(CONF_PROTOCOL, default=DEFAULT_PROTOCOL): vol.In(PROTOCOL_CHOICES),
+    vol.Optional(CONF_USE_TLS, default=False): bool,
+    vol.Optional(CONF_PASSWORD): PASSWORD_SELECTOR,
+}
+_CONNECTION_KEYS = frozenset(str(key) for key in _CONNECTION_FIELDS)
+
+STEP_USER_SCHEMA = vol.Schema({**_CONNECTION_FIELDS, vol.Optional(CONF_TAGS): TAGS_SELECTOR})
+STEP_RECONFIGURE_SCHEMA = vol.Schema(_CONNECTION_FIELDS)
 
 
 def split_tags(raw: str) -> list[str]:
@@ -158,6 +160,50 @@ class S7ConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=self.add_suggested_values_to_schema(STEP_USER_SCHEMA, suggested),
+            errors=errors,
+            description_placeholders=placeholders,
+        )
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Change how the PLC is reached; the tags and their entities stay.
+
+        The form opens with the stored settings, the password included (the
+        field masks it). Emptying the password field removes the password.
+        """
+        entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+        placeholders: dict[str, str] = {}
+
+        if user_input is not None:
+            tags: list[str] = entry.options.get(CONF_TAGS, entry.data.get(CONF_TAGS, []))
+            try:
+                _parse_tags_for_validation(tags)
+            except ValueError:  # stored before such a tag was refused; Configure reports it
+                tags = []
+            error, failed_tags = await async_test_read(self.hass, user_input, tags)
+            if error:
+                errors["base"] = error
+                placeholders["tag"] = failed_tags
+            else:
+                data = {k: v for k, v in entry.data.items() if k not in _CONNECTION_KEYS} | user_input
+                old_id, new_id = plc_id(entry.data), plc_id(data)
+                other = self.hass.config_entries.async_entry_for_domain_unique_id(DOMAIN, new_id)
+                if other is not None and other.entry_id != entry.entry_id:
+                    return self.async_abort(reason="already_configured")
+                if new_id != old_id:
+                    # Unique IDs and the device are built from the PLC id. Without
+                    # this the reload would drop every entity and make new ones.
+                    async_move_plc_id(self.hass, entry, old_id, new_id)
+                title = entry.title
+                if title == f"S7 {entry.data[CONF_HOST]}":
+                    title = f"S7 {data[CONF_HOST]}"
+                if entry.update_listeners:  # loaded: its update listener reloads it
+                    return self.async_update_and_abort(entry, unique_id=new_id, title=title, data=data)
+                return self.async_update_reload_and_abort(entry, unique_id=new_id, title=title, data=data)
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(STEP_RECONFIGURE_SCHEMA, user_input or entry.data),
             errors=errors,
             description_placeholders=placeholders,
         )
