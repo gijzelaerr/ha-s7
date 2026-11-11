@@ -5,7 +5,7 @@
 [![Validate](https://github.com/gijzelaerr/ha-s7/actions/workflows/validate.yml/badge.svg)](https://github.com/gijzelaerr/ha-s7/actions/workflows/validate.yml)
 [![Lint](https://github.com/gijzelaerr/ha-s7/actions/workflows/lint.yml/badge.svg)](https://github.com/gijzelaerr/ha-s7/actions/workflows/lint.yml)
 [![Test](https://github.com/gijzelaerr/ha-s7/actions/workflows/test.yml/badge.svg)](https://github.com/gijzelaerr/ha-s7/actions/workflows/test.yml)
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg)](https://github.com/hacs/integration)
 
 Read and write tags on a Siemens S7 PLC (S7-300, S7-400, S7-1200, S7-1500) as Home Assistant sensors, binary sensors, switches, numbers and text entities.
 
@@ -28,7 +28,7 @@ Two wire protocols are supported, both pure Python with no native dependencies:
   | `DB`, `M`, `Q` | numeric | `sensor` + `number` (writable) |
   | `DB`, `M`, `Q` | `STRING`, `WSTRING` | `sensor` + `text` (writable) |
   | `I`, or any area | numeric, `DATE`, `TIME`, … | `sensor` (read-only) |
-- **All S7 types** — `BOOL`, `BYTE`/`SINT`/`USINT`, `INT`/`UINT`/`WORD`, `DINT`/`UDINT`/`DWORD`, `REAL`, `LREAL`, `LINT`/`ULINT`, `STRING[n]`, `WSTRING[n]`, `DATE`, `TIME`, `TOD`, `DT`, `DTL`, `LDT`, `LTIME`, `LTOD`
+- **All S7 types** — `BOOL`, `BYTE`/`SINT`/`USINT`, `INT`/`UINT`/`WORD`, `DINT`/`UDINT`/`DWORD`, `REAL`, `LREAL`, `LINT`/`ULINT`, `STRING[n]`, `WSTRING[n]`, `DATE`, `TIME`, `S5TIME` (read-only), `TOD`, `DT`, `DTL`, `LDT`, `LTIME`, `LTOD`
 - **Sensors Home Assistant understands** — numeric sensors are measurements (so they get statistics and graphs), `TIME`/`LTIME`/`S5TIME` are durations in seconds, `DATE` is a date, and `DT`/`DTL` are timestamps. The PLC stores `DT` and `DTL` without a time zone; they are read as being in Home Assistant's time zone.
 - **Batched reads** — multi-variable requests on the legacy protocol and for DB tags on S7CommPlus (other S7CommPlus areas are read one at a time)
 - **TLS + password authentication** — S7CommPlus V2/V3 on S7-1200/1500
@@ -39,13 +39,11 @@ Two wire protocols are supported, both pure Python with no native dependencies:
 
 ### HACS (recommended)
 
-This repository is not in the default HACS list yet, so add it as a custom repository:
+The integration is in the default HACS list:
 
-1. In HACS, open the menu (⋮) → **Custom repositories**.
-2. Add `https://github.com/gijzelaerr/ha-s7` with category **Integration**.
-3. Search for **Siemens S7 PLC** and download it.
-4. Restart Home Assistant.
-5. **Settings → Devices & Services → Add Integration** → *Siemens S7 PLC*.
+1. In HACS, search for **Siemens S7 PLC** and download it.
+2. Restart Home Assistant.
+3. **Settings → Devices & Services → Add Integration** → *Siemens S7 PLC*.
 
 Home Assistant installs the required Python packages (`python-snap7`, `s7commplus`) itself on the first start.
 
@@ -97,7 +95,7 @@ See [python-snap7's tag docs](https://python-snap7.readthedocs.io/en/latest/API/
 
 ## Services
 
-Both services take the `entry_id` of the PLC's config entry (a long ID string, found in `.storage/core.config_entries` in your configuration directory). `tag` accepts any PLC4X or nodeS7 address, whether or not it is configured as an entity.
+Both services take the config entry of the PLC to act on. In the UI (**Developer tools → Actions**, or an action in an automation) pick the PLC from the **Config entry** list. In YAML, `entry_id` is that entry's ID: pick the PLC in the UI and switch to YAML mode to see it. `tag` accepts any PLC4X or nodeS7 address, whether or not it is configured as an entity.
 
 ### `s7.write_tag`
 
@@ -125,7 +123,7 @@ data:
 
 - Home Assistant ≥ 2024.12
 - Python ≥ 3.13
-- python-snap7 ≥ 3.2.1 and s7commplus ≥ 0.1.0 (installed automatically by Home Assistant)
+- python-snap7 ≥ 3.4.0 and s7commplus ≥ 0.4.0 (installed automatically by Home Assistant)
 
 ## Development
 
