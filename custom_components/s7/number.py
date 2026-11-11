@@ -6,29 +6,10 @@ from homeassistant.components.number import NumberEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from snap7.type import Area
 
-from .const import DOMAIN
+from .const import DOMAIN, FLOAT_TYPES, NUMERIC_TYPES, WRITABLE_AREAS
 from .coordinator import S7Coordinator
 from .entity import S7BaseEntity
-
-# Writable numeric types that map to a number entity
-_NUMBER_TYPES = {
-    "BYTE",
-    "SINT",
-    "USINT",
-    "INT",
-    "UINT",
-    "WORD",
-    "DINT",
-    "UDINT",
-    "DWORD",
-    "REAL",
-    "LINT",
-    "ULINT",
-    "LWORD",
-    "LREAL",
-}
 
 # Sensible min/max per S7 type
 _RANGES: dict[str, tuple[float, float]] = {
@@ -48,9 +29,6 @@ _RANGES: dict[str, tuple[float, float]] = {
     "LREAL": (-1.7e308, 1.7e308),
 }
 
-_FLOAT_TYPES = ("REAL", "LREAL")
-_WRITABLE_AREAS = {Area.DB, Area.MK, Area.PA}
-
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -61,7 +39,7 @@ async def async_setup_entry(
     entities: list[S7Number] = []
     for raw, tag in coordinator.parsed_tags.items():
         dt = tag.datatype.upper()
-        if dt in _NUMBER_TYPES and tag.area in _WRITABLE_AREAS:
+        if dt in NUMERIC_TYPES and tag.area in WRITABLE_AREAS:
             entities.append(S7Number(coordinator, raw, dt))
     async_add_entities(entities)
 
@@ -73,7 +51,7 @@ class S7Number(S7BaseEntity, NumberEntity):
         self._attr_native_min_value = lo
         self._attr_native_max_value = hi
         self._datatype = datatype
-        if datatype in _FLOAT_TYPES:
+        if datatype in FLOAT_TYPES:
             self._attr_native_step = 0.001  # the default of 1 is for whole numbers
 
     @property
@@ -83,5 +61,5 @@ class S7Number(S7BaseEntity, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         # Integer types need int, REAL/LREAL accept float
-        to_write: float | int = value if self._datatype in _FLOAT_TYPES else int(value)
+        to_write: float | int = value if self._datatype in FLOAT_TYPES else int(value)
         await self.coordinator.async_write_tag(self._tag, to_write)
