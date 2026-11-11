@@ -14,14 +14,15 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from snap7.tags import Tag, parse_tag
 
 from .const import CONF_HOST, CONF_PORT, CONF_PROTOCOL, CONF_RACK, CONF_SLOT, DEFAULT_PROTOCOL, DOMAIN, plc_id
-from .plc import TagReadError, create_client
+from .plc import TagReadError, create_client, is_connection_error
 
 _LOGGER = logging.getLogger(__name__)
 
 # The PLC clients are blocking and not thread-safe across concurrent
 # operations, so we serialise all client access with a single asyncio lock.
-# On connection loss we back off before retrying to avoid hot-looping on
-# a PLC that stays down.
+# Nothing waits while holding it: a broken connection is dropped and the next
+# poll or write opens a new one.
+# Seconds between the attempts to release a pulse.
 _RECONNECT_BACKOFF_SECONDS = (1.0, 2.0, 5.0, 10.0)
 _PULSE_RELEASE_ATTEMPTS = 3
 
@@ -91,7 +92,6 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         # parse_tags keeps one entry per address, and every value read needs one string.
         self._tag_strings = list(self._parsed_tags)
         self._lock = asyncio.Lock()
-        self._connect_failures = 0
         self._closing = False
         # Tags the PLC refused on the last poll that reached it, with the reason.
         self._failed_tags: dict[str, str] = {}
@@ -178,7 +178,9 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             try:
                 result = await self.hass.async_add_executor_job(_read)
             except Exception as err:
-                await self._async_mark_reconnect()
+                # A tag the PLC refuses never gets here (see read_each), so
+                # this is the connection or something unexpected.
+                await self._async_drop_connection()
                 raise UpdateFailed(f"Failed to read PLC tags: {err}") from err
             self._last_read_latency = time.monotonic() - started
             failed = {tag: str(value) for tag, value in result.items() if isinstance(value, TagReadError)}
@@ -186,7 +188,6 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             if failed and len(failed) == len(result):
                 raise UpdateFailed(f"The PLC could not read any of the configured tags: {next(iter(failed.values()))}")
             self._read_count += 1
-            self._connect_failures = 0
             return {tag: value for tag, value in result.items() if tag not in failed}
 
     def _note_failed_tags(self, failed: dict[str, str]) -> None:
@@ -198,18 +199,16 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.info("%s on %s can be read again", tag, self._host)
         self._failed_tags = failed
 
-    async def _async_mark_reconnect(self) -> None:
-        """Drop the connection so the next cycle reconnects, with bounded backoff."""
+    async def _async_drop_connection(self) -> None:
+        """Close the connection so the next poll or write opens a new one.
+
+        Call with the lock held.
+        """
         try:
             if self._client.connected:
                 await self.hass.async_add_executor_job(self._client.disconnect)
         except Exception:  # noqa: BLE001
             pass
-        idx = min(self._connect_failures, len(_RECONNECT_BACKOFF_SECONDS) - 1)
-        delay = _RECONNECT_BACKOFF_SECONDS[idx]
-        self._connect_failures += 1
-        _LOGGER.debug("Reconnect backoff: %ss (failure #%d)", delay, self._connect_failures)
-        await asyncio.sleep(delay)
 
     def resolve_tag(self, tag_string: str) -> Tag:
         """Return the tag for a configured address, or parse an ad-hoc one."""
@@ -243,6 +242,8 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             except (TypeError, ValueError) as err:
                 raise ServiceValidationError(f"Cannot write {value!r} to {tag_string}: {err}") from err
             except Exception as err:
+                if is_connection_error(err):
+                    await self._async_drop_connection()
                 raise HomeAssistantError(f"Failed to write {tag_string}: {err}") from err
             self._write_count += 1
         await self.async_request_refresh()
@@ -273,6 +274,7 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                     _LOGGER.error("Could not release pulse on %s, the bit may still be set: %s", tag_string, err)
                     raise
                 async with self._lock:
-                    await self._async_mark_reconnect()
+                    await self._async_drop_connection()
+                await asyncio.sleep(_RECONNECT_BACKOFF_SECONDS[min(attempt, len(_RECONNECT_BACKOFF_SECONDS)) - 1])
         if self._closing:  # unloaded during the pulse: the write reconnected
             await self.async_disconnect()
