@@ -38,7 +38,9 @@ async def test_s5time_is_a_sensor(hass: HomeAssistant) -> None:
             if e.domain == "sensor" and "diag" not in e.unique_id
         ]
         assert len(sensors) == 1
-        assert hass.states.get(sensors[0]).state == "0:00:23.400000"
+        state = hass.states.get(sensors[0])
+        assert state.state == "23.4"
+        assert state.attributes["unit_of_measurement"] == "s"
         await hass.config_entries.async_unload(entry.entry_id)
     finally:
         server.stop()
