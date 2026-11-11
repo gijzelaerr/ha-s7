@@ -6,19 +6,10 @@ from homeassistant.components.text import TextEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from snap7.type import Area
 
-from .const import DOMAIN
+from .const import DOMAIN, STRING_TYPES, WRITABLE_AREAS, base_type
 from .coordinator import S7Coordinator
 from .entity import S7BaseEntity
-
-_STRING_TYPES = ("STRING", "WSTRING", "FSTRING")
-_WRITABLE_AREAS = {Area.DB, Area.MK, Area.PA}
-
-
-def _base_type(datatype: str) -> str:
-    dt = datatype.upper()
-    return dt.split("[", 1)[0] if "[" in dt else dt
 
 
 def _string_capacity(datatype: str) -> int | None:
@@ -40,7 +31,7 @@ async def async_setup_entry(
     coordinator: S7Coordinator = hass.data[DOMAIN][entry.entry_id]
     entities: list[S7Text] = []
     for raw, tag in coordinator.parsed_tags.items():
-        if _base_type(tag.datatype) in _STRING_TYPES and tag.area in _WRITABLE_AREAS:
+        if base_type(tag.datatype) in STRING_TYPES and tag.area in WRITABLE_AREAS:
             entities.append(S7Text(coordinator, raw, tag.datatype))
     async_add_entities(entities)
 
