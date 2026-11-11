@@ -7,6 +7,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Fixed
+- A tag the PLC cannot read, such as one in a data block that does not exist, makes only its own entities unavailable instead of all of them. The tag is logged once, and again when it can be read.
+- A failed poll no longer holds up writes and service calls for 1 to 10 seconds; the connection is closed at once and the next poll or write opens a new one. A write that fails because the connection was lost closes it too.
 - More than 20 tags on the classic S7 protocol no longer makes setup and every poll fail; the tags are read in groups of 20.
 - The tags field in setup and Configure is a multi-line box, so tags can be entered one per line, and a failed setup step keeps what was entered instead of clearing the tag list. (#63)
 

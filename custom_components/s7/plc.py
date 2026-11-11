@@ -17,7 +17,9 @@ from __future__ import annotations
 from typing import Any, Protocol
 
 from s7commplus import Client as CommPlusClient
+from s7commplus import error as commplus_error
 from s7commplus.protocol import DataType, Ids
+from snap7 import error as legacy_error
 from snap7.client import Client as LegacyClient
 from snap7.tags import Tag, decode_tag, encode_tag
 from snap7.type import Area
@@ -52,6 +54,35 @@ _WRITE_DATATYPES: dict[str, DataType] = {
 }
 
 
+# Errors that mean the connection is gone or can no longer be trusted. A stale
+# or lost packet is a protocol error in both libraries, but it leaves the
+# stream out of step, so it counts. Anything else a read or write raises is
+# about the item that was asked for.
+_CONNECTION_ERRORS: tuple[type[BaseException], ...] = (
+    OSError,
+    legacy_error.S7ConnectionError,
+    legacy_error.S7TimeoutError,
+    legacy_error.S7AuthenticationError,
+    legacy_error.S7StalePacketError,
+    legacy_error.S7PacketLostError,
+    commplus_error.S7ConnectionError,
+    commplus_error.S7TimeoutError,
+    commplus_error.S7AuthenticationError,
+    commplus_error.S7IntegrityError,
+    commplus_error.S7StalePacketError,
+    commplus_error.S7PacketLostError,
+)
+
+
+def is_connection_error(err: BaseException) -> bool:
+    """Whether ``err`` is about the connection rather than about one tag."""
+    return isinstance(err, _CONNECTION_ERRORS)
+
+
+class TagReadError(Exception):
+    """Stands in for the value of a tag the PLC could not read."""
+
+
 class PlcClient(Protocol):
     """What the coordinator needs from a PLC connection."""
 
@@ -62,7 +93,16 @@ class PlcClient(Protocol):
 
     def disconnect(self) -> None: ...
 
-    def read_tags(self, tags: list[Tag]) -> list[Any]: ...
+    def read_tags(self, tags: list[Tag]) -> list[Any]:
+        """Read all tags; raise if any of them cannot be read."""
+        ...
+
+    def read_each(self, tags: list[Tag]) -> list[Any]:
+        """Read all tags, with a ``TagReadError`` in place of each unreadable one.
+
+        Raises only for connection errors.
+        """
+        ...
 
     def write_tag(self, tag: Tag, value: Any) -> None: ...
 
@@ -101,6 +141,29 @@ class LegacyPlcClient:
         for start in range(0, len(tags), step):
             values.extend(self._client.read_tags(tags[start : start + step]))
         return values
+
+    def read_each(self, tags: list[Tag]) -> list[Any]:
+        # The PLC refuses a whole request over one bad item, so a group that
+        # fails is read again tag by tag to find which ones are readable.
+        step = self._client.MAX_VARS
+        values: list[Any] = []
+        for start in range(0, len(tags), step):
+            group = tags[start : start + step]
+            try:
+                values.extend(self._client.read_tags(group))
+            except Exception as err:
+                if is_connection_error(err):
+                    raise
+                values.extend(self._read_one(tag) for tag in group)
+        return values
+
+    def _read_one(self, tag: Tag) -> Any:
+        try:
+            return self._client.read_tags([tag])[0]
+        except Exception as err:
+            if is_connection_error(err):
+                raise
+            return TagReadError(str(err))
 
     def write_tag(self, tag: Tag, value: Any) -> None:
         self._client.write_tag(tag, value)
@@ -152,6 +215,38 @@ class CommPlusPlcClient:
             if tag.area != Area.DB:
                 results[i] = decode_tag(tag, bytearray(self._read_raw(tag)))
         return results
+
+    def read_each(self, tags: list[Tag]) -> list[Any]:
+        for tag in tags:
+            _reject_symbolic(tag)
+        db_idx = [i for i, t in enumerate(tags) if t.area == Area.DB]
+        results: list[Any] = [None] * len(tags)
+
+        if db_idx:
+            chunks = self._client.db_read_multi([(tags[i].db_number, tags[i].byte_offset, tags[i].size) for i in db_idx])
+            # An unreadable item comes back empty, and so does every item of a
+            # request the PLC refused as a whole. If nothing came back, ask
+            # again tag by tag before giving up on all of them.
+            refused = len(db_idx) > 1 and not any(chunks)
+            for i, chunk in zip(db_idx, chunks, strict=True):
+                if refused:
+                    results[i] = self._read_one(tags[i])
+                elif len(chunk) < tags[i].size:
+                    results[i] = TagReadError(f"Read failed for {tags[i]}")
+                else:
+                    results[i] = decode_tag(tags[i], bytearray(chunk))
+        for i, tag in enumerate(tags):
+            if tag.area != Area.DB:
+                results[i] = self._read_one(tag)
+        return results
+
+    def _read_one(self, tag: Tag) -> Any:
+        try:
+            return decode_tag(tag, bytearray(self._read_raw(tag)))
+        except Exception as err:
+            if is_connection_error(err):
+                raise
+            return TagReadError(str(err))
 
     def write_tag(self, tag: Tag, value: Any) -> None:
         _reject_symbolic(tag)
