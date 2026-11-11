@@ -35,6 +35,8 @@ from .services import async_setup_services, async_unload_services
 
 _LOGGER = logging.getLogger(__name__)
 
+type S7ConfigEntry = ConfigEntry[S7Coordinator]
+
 
 async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Move unique IDs and the device from the host name to the full PLC id."""
@@ -58,7 +60,7 @@ async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: S7ConfigEntry) -> bool:
     """Set up s7 from a config entry."""
     data = entry.data
     options = entry.options
@@ -87,6 +89,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         raise ConfigEntryNotReady(f"Cannot connect to PLC at {coordinator.host}: {err}") from err
     await coordinator.async_config_entry_first_refresh()
 
+    entry.runtime_data = coordinator
+    # Bridge: the platform modules still look the coordinator up in hass.data.
+    # Remove once they read entry.runtime_data.
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
     _async_remove_stale_entities(hass, entry, coordinator)
@@ -97,7 +102,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
-def _async_remove_stale_entities(hass: HomeAssistant, entry: ConfigEntry, coordinator: S7Coordinator) -> None:
+def _async_remove_stale_entities(hass: HomeAssistant, entry: S7ConfigEntry, coordinator: S7Coordinator) -> None:
     """Drop registry entries for tags that were removed from the configuration."""
     registry = er.async_get(hass)
     keep = {f"{coordinator.plc_id}_{tag}" for tag in coordinator.tags}
@@ -107,16 +112,16 @@ def _async_remove_stale_entities(hass: HomeAssistant, entry: ConfigEntry, coordi
             registry.async_remove(entity.entity_id)
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: S7ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        coordinator: S7Coordinator = hass.data[DOMAIN].pop(entry.entry_id)
-        await coordinator.async_disconnect()
+        hass.data[DOMAIN].pop(entry.entry_id, None)  # Bridge: see async_setup_entry
+        await entry.runtime_data.async_disconnect()
         await async_unload_services(hass)
     return unload_ok
 
 
-async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+async def _async_update_listener(hass: HomeAssistant, entry: S7ConfigEntry) -> None:
     """Reload the integration when options change."""
     await hass.config_entries.async_reload(entry.entry_id)

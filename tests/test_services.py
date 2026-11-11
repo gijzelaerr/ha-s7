@@ -54,7 +54,7 @@ async def test_write_tag_service(hass: HomeAssistant, loaded_entry) -> None:
     )
     await hass.async_block_till_done()
 
-    coordinator = hass.data[DOMAIN][loaded_entry.entry_id]
+    coordinator = loaded_entry.runtime_data
     assert abs(coordinator.data["DB2.DBD4:REAL"] - 3.14) < 0.001
 
 
@@ -71,7 +71,7 @@ async def test_write_tag_service_unknown_entry(hass: HomeAssistant, loaded_entry
 
 async def test_pulse_tag_service_toggles_bit(hass: HomeAssistant, loaded_entry) -> None:
     """pulse_tag holds the bit True for duration seconds, then writes False."""
-    coordinator = hass.data[DOMAIN][loaded_entry.entry_id]
+    coordinator = loaded_entry.runtime_data
 
     # Kick off the pulse and watch the bit flip during the hold.
     task = asyncio.create_task(

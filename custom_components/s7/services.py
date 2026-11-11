@@ -14,15 +14,19 @@ configured at once.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import probatio as vol
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN
 from .coordinator import S7Coordinator
+
+if TYPE_CHECKING:
+    from . import S7ConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,11 +53,12 @@ _PULSE_TAG_SCHEMA = vol.Schema(
 
 
 def _get_coordinator(hass: HomeAssistant, entry_id: str) -> S7Coordinator:
-    coordinators: dict[str, S7Coordinator] = hass.data.get(DOMAIN, {})
-    coordinator = coordinators.get(entry_id)
-    if coordinator is None:
-        raise HomeAssistantError(f"No s7 config entry found for id {entry_id!r}")
-    return coordinator
+    entry: S7ConfigEntry | None = hass.config_entries.async_get_entry(entry_id)
+    if entry is None or entry.domain != DOMAIN:
+        raise ServiceValidationError(f"No s7 config entry found for id {entry_id!r}")
+    if entry.state is not ConfigEntryState.LOADED:
+        raise HomeAssistantError(f"The s7 config entry {entry.title!r} is not loaded")
+    return entry.runtime_data
 
 
 def _coerce_value(raw: Any, datatype: str) -> Any:
@@ -100,7 +105,7 @@ async def async_setup_services(hass: HomeAssistant) -> None:
 
 async def async_unload_services(hass: HomeAssistant) -> None:
     """Remove services when the last config entry unloads."""
-    if not hass.data.get(DOMAIN):
+    if not hass.config_entries.async_loaded_entries(DOMAIN):
         for name in (SERVICE_WRITE_TAG, SERVICE_PULSE_TAG):
             if hass.services.has_service(DOMAIN, name):
                 hass.services.async_remove(DOMAIN, name)

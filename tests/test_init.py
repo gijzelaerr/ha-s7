@@ -15,6 +15,7 @@ from custom_components.s7.const import (
     CONF_TAGS,
     DOMAIN,
 )
+from custom_components.s7.coordinator import S7Coordinator
 
 
 async def test_entry_setup_and_unload(hass: HomeAssistant, s7_server) -> None:
@@ -38,8 +39,7 @@ async def test_entry_setup_and_unload(hass: HomeAssistant, s7_server) -> None:
     await hass.async_block_till_done()
 
     assert entry.state is ConfigEntryState.LOADED
-    assert DOMAIN in hass.data
-    assert entry.entry_id in hass.data[DOMAIN]
+    assert isinstance(entry.runtime_data, S7Coordinator)
 
     # Sensor entities should have been created for REAL and INT tags
     states = [hass.states.get(s.entity_id) for s in hass.states.async_all("sensor")]

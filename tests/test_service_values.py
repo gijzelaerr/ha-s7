@@ -28,7 +28,7 @@ async def test_string_tag_keeps_the_text(hass: HomeAssistant, s7_server, value: 
     entry = await _setup(hass, s7_server[1], [tag])
     await hass.services.async_call(DOMAIN, "write_tag", {"entry_id": entry.entry_id, "tag": tag, "value": value}, blocking=True)
     await hass.async_block_till_done()
-    assert hass.data[DOMAIN][entry.entry_id].data[tag] == value
+    assert entry.runtime_data.data[tag] == value
     await hass.config_entries.async_unload(entry.entry_id)
 
 
@@ -37,7 +37,7 @@ async def test_numeric_tag_still_converts(hass: HomeAssistant, s7_server) -> Non
     entry = await _setup(hass, s7_server[1], [tag])
     await hass.services.async_call(DOMAIN, "write_tag", {"entry_id": entry.entry_id, "tag": tag, "value": "123"}, blocking=True)
     await hass.async_block_till_done()
-    assert hass.data[DOMAIN][entry.entry_id].data[tag] == 123
+    assert entry.runtime_data.data[tag] == 123
     await hass.config_entries.async_unload(entry.entry_id)
 
 
