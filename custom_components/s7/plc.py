@@ -94,7 +94,13 @@ class LegacyPlcClient:
 
     def read_tags(self, tags: list[Tag]) -> list[Any]:
         # Passing Tag objects lets python-snap7's optimizer coalesce reads.
-        return list(self._client.read_tags(tags))
+        # python-snap7 refuses more than MAX_VARS tags per call, so longer
+        # lists go out in groups.
+        step = self._client.MAX_VARS
+        values: list[Any] = []
+        for start in range(0, len(tags), step):
+            values.extend(self._client.read_tags(tags[start : start + step]))
+        return values
 
     def write_tag(self, tag: Tag, value: Any) -> None:
         self._client.write_tag(tag, value)
