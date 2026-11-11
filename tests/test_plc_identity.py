@@ -53,7 +53,7 @@ async def test_two_ports_on_one_host_keep_their_entities(hass: HomeAssistant, s7
     second = await _setup(hass, port, [TAG])
     registry = er.async_get(hass)
     for entry in (first, second):
-        assert len(er.async_entries_for_config_entry(registry, entry.entry_id)) == 6  # sensor, number, four diagnostics
+        assert len(er.async_entries_for_config_entry(registry, entry.entry_id)) == 7  # sensor, number, four metrics, CPU state
         assert len(dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)) == 1
     await hass.config_entries.async_unload(first.entry_id)
     await hass.config_entries.async_unload(second.entry_id)

@@ -82,3 +82,8 @@ TIME_TYPES = frozenset({"TIME", "LTIME", "S5TIME", "TOD", "LTOD", "DATE", "DT", 
 def base_type(datatype: str) -> str:
     """Strip ``STRING[20]`` down to ``STRING``, in upper case."""
     return datatype.upper().split("[", 1)[0]
+
+
+# States of the CPU state sensor; also its translation keys.
+CPU_STATE_RUN = "run"
+CPU_STATE_STOP = "stop"

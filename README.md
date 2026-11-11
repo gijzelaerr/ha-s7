@@ -32,6 +32,7 @@ Two wire protocols are supported, both pure Python with no native dependencies:
 - **Sensors Home Assistant understands** — numeric sensors are measurements (so they get statistics and graphs), `TIME`/`LTIME`/`S5TIME` are durations in seconds, `DATE` is a date, and `DT`/`DTL` are timestamps. The PLC stores `DT` and `DTL` without a time zone; they are read as being in Home Assistant's time zone.
 - **Batched reads** — multi-variable requests on the legacy protocol and for DB tags on S7CommPlus (other S7CommPlus areas are read one at a time)
 - **TLS + password authentication** — S7CommPlus V2/V3 on S7-1200/1500
+- **CPU state sensor** — shows whether the PLC is in Run or Stop. An S7-1200 on S7CommPlus does not report its state, and neither does a classic CPU that refuses the query; the sensor is then unknown.
 - **Diagnostic sensors** — read/write counters, read latency and connected-since per PLC (disabled by default; enable them on the device page)
 - **`write_tag` and `pulse_tag` services** for automations
 
@@ -122,7 +123,7 @@ data:
 ## Requirements
 
 - Home Assistant ≥ 2026.9 (which runs on Python ≥ 3.14.2)
-- python-snap7 ≥ 3.4.0 and s7commplus ≥ 0.4.0 (installed automatically by Home Assistant)
+- python-snap7 ≥ 3.5.0 and s7commplus ≥ 0.4.0 (installed automatically by Home Assistant)
 
 ## Development
 
