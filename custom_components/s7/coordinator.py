@@ -14,7 +14,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from snap7.tags import Tag, parse_tag
 
 from .const import CONF_HOST, CONF_PORT, CONF_PROTOCOL, CONF_RACK, CONF_SLOT, DEFAULT_PROTOCOL, DOMAIN, plc_id
-from .plc import create_client
+from .plc import TagReadError, create_client
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -93,6 +93,8 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._lock = asyncio.Lock()
         self._connect_failures = 0
         self._closing = False
+        # Tags the PLC refused on the last poll that reached it, with the reason.
+        self._failed_tags: dict[str, str] = {}
         # Diagnostic metrics
         self._read_count = 0
         self._write_count = 0
@@ -117,6 +119,11 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
     def parsed_tags(self) -> dict[str, Tag]:
         """Parsed Tag objects keyed by original input string."""
         return self._parsed_tags
+
+    @property
+    def failed_tags(self) -> dict[str, str]:
+        """Tags the PLC could not read on the last poll, with the reason."""
+        return dict(self._failed_tags)
 
     @property
     def read_count(self) -> int:
@@ -154,12 +161,16 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._connected_since = datetime.now(UTC)
 
     async def _async_update_data(self) -> dict[str, Any]:
-        """Read all configured tags via the multi-variable optimizer."""
+        """Read all configured tags via the multi-variable optimizer.
+
+        A tag the PLC cannot read is left out of the result, so only its
+        entity becomes unavailable.
+        """
 
         def _read() -> dict[str, Any]:
             if not self._client.connected:
                 self._blocking_connect()
-            values = self._client.read_tags(list(self._parsed_tags.values()))
+            values = self._client.read_each(list(self._parsed_tags.values()))
             return dict(zip(self._tag_strings, values, strict=True))
 
         async with self._lock:
@@ -170,9 +181,22 @@ class S7Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                 await self._async_mark_reconnect()
                 raise UpdateFailed(f"Failed to read PLC tags: {err}") from err
             self._last_read_latency = time.monotonic() - started
+            failed = {tag: str(value) for tag, value in result.items() if isinstance(value, TagReadError)}
+            self._note_failed_tags(failed)
+            if failed and len(failed) == len(result):
+                raise UpdateFailed(f"The PLC could not read any of the configured tags: {next(iter(failed.values()))}")
             self._read_count += 1
             self._connect_failures = 0
-            return result
+            return {tag: value for tag, value in result.items() if tag not in failed}
+
+    def _note_failed_tags(self, failed: dict[str, str]) -> None:
+        """Log a tag when it starts failing and when it reads again, not every poll."""
+        for tag, reason in failed.items():
+            if tag not in self._failed_tags:
+                _LOGGER.warning("Cannot read %s from %s, its entity is unavailable: %s", tag, self._host, reason)
+        for tag in self._failed_tags.keys() - failed.keys():
+            _LOGGER.info("%s on %s can be read again", tag, self._host)
+        self._failed_tags = failed
 
     async def _async_mark_reconnect(self) -> None:
         """Drop the connection so the next cycle reconnects, with bounded backoff."""
