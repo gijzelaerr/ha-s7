@@ -2,23 +2,25 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from homeassistant.components.binary_sensor import BinarySensorEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from snap7.type import Area
 
-from .const import DOMAIN
-from .coordinator import S7Coordinator
 from .entity import S7BaseEntity
+
+if TYPE_CHECKING:
+    from . import S7ConfigEntry
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: S7ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinator: S7Coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     entities: list[S7BinarySensor] = []
     # Only BOOL tags from the input area (read-only).
     # Writable BOOLs in DB/M/Q areas become switches instead (see switch.py).

@@ -2,24 +2,25 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, WRITABLE_AREAS
-from .coordinator import S7Coordinator
+from .const import WRITABLE_AREAS
 from .entity import S7BaseEntity
+
+if TYPE_CHECKING:
+    from . import S7ConfigEntry
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: S7ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinator: S7Coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     entities: list[S7Switch] = []
     for raw, tag in coordinator.parsed_tags.items():
         if tag.datatype.upper() == "BOOL" and tag.area in WRITABLE_AREAS:

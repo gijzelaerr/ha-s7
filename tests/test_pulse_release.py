@@ -54,7 +54,7 @@ def _fail_releases(coordinator: Any, failures: int) -> None:
 async def test_cancelled_pulse_releases(hass: HomeAssistant, s7_server) -> None:
     port = s7_server[1]
     entry = await _setup(hass, port, [BIT])
-    task = asyncio.create_task(hass.data[DOMAIN][entry.entry_id].async_pulse_tag(BIT, 30))
+    task = asyncio.create_task(entry.runtime_data.async_pulse_tag(BIT, 30))
     await asyncio.sleep(0.2)
     assert await hass.async_add_executor_job(_bit_on_the_plc, port)
     task.cancel()
@@ -68,7 +68,7 @@ async def test_release_retries_after_a_failure(hass: HomeAssistant, s7_server, m
     monkeypatch.setattr(coordinator_module, "_RECONNECT_BACKOFF_SECONDS", (0.0,))
     port = s7_server[1]
     entry = await _setup(hass, port, [BIT])
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     _fail_releases(coordinator, 1)
     await coordinator.async_pulse_tag(BIT, 0.01)
     assert not await hass.async_add_executor_job(_bit_on_the_plc, port)
@@ -78,7 +78,7 @@ async def test_release_retries_after_a_failure(hass: HomeAssistant, s7_server, m
 async def test_release_gives_up_loudly(hass: HomeAssistant, s7_server, monkeypatch, caplog) -> None:
     monkeypatch.setattr(coordinator_module, "_RECONNECT_BACKOFF_SECONDS", (0.0,))
     entry = await _setup(hass, s7_server[1], [BIT])
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     _fail_releases(coordinator, 3)
     with pytest.raises((OSError, HomeAssistantError)):
         await coordinator.async_pulse_tag(BIT, 0.01)
@@ -89,7 +89,7 @@ async def test_release_gives_up_loudly(hass: HomeAssistant, s7_server, monkeypat
 async def test_unload_during_a_pulse_releases_and_disconnects(hass: HomeAssistant, s7_server) -> None:
     port = s7_server[1]
     entry = await _setup(hass, port, [BIT])
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     task = asyncio.create_task(coordinator.async_pulse_tag(BIT, 0.3))
     await asyncio.sleep(0.1)
     await hass.config_entries.async_unload(entry.entry_id)

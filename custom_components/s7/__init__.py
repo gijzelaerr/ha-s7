@@ -103,9 +103,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: S7ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
-    # Bridge: the platform modules still look the coordinator up in hass.data.
-    # Remove once they read entry.runtime_data.
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
     _async_remove_stale_entities(hass, entry, coordinator)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -128,7 +125,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: S7ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id, None)  # Bridge: see async_setup_entry
         await entry.runtime_data.async_disconnect()
     return unload_ok
 

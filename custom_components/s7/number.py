@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from homeassistant.components.number import NumberEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, FLOAT_TYPES, NUMERIC_TYPES, WRITABLE_AREAS
+from .const import FLOAT_TYPES, NUMERIC_TYPES, WRITABLE_AREAS
 from .coordinator import S7Coordinator
 from .entity import S7BaseEntity
+
+if TYPE_CHECKING:
+    from . import S7ConfigEntry
 
 # Sensible min/max per S7 type
 _RANGES: dict[str, tuple[float, float]] = {
@@ -32,10 +36,10 @@ _RANGES: dict[str, tuple[float, float]] = {
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: S7ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinator: S7Coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     entities: list[S7Number] = []
     for raw, tag in coordinator.parsed_tags.items():
         dt = tag.datatype.upper()

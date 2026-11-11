@@ -57,7 +57,7 @@ def _lose_connection_once(client: Any, method: str) -> threading.Event:
 async def test_write_is_not_held_up_by_a_failed_read(hass: HomeAssistant, s7_server) -> None:
     port = s7_server[1]
     entry = await _setup(hass, port, [WORD])
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     connected_since = coordinator.connected_since
     lost = _lose_connection_once(coordinator._client, "read_each")
 
@@ -81,7 +81,7 @@ async def test_write_is_not_held_up_by_a_failed_read(hass: HomeAssistant, s7_ser
 async def test_failed_write_drops_a_lost_connection(hass: HomeAssistant, s7_server) -> None:
     port = s7_server[1]
     entry = await _setup(hass, port, [WORD])
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     _lose_connection_once(coordinator._client, "write_tag")
 
     with pytest.raises(HomeAssistantError):
@@ -98,7 +98,7 @@ async def test_failed_write_drops_a_lost_connection(hass: HomeAssistant, s7_serv
 
 async def test_refused_write_keeps_the_connection(hass: HomeAssistant, s7_server) -> None:
     entry = await _setup(hass, s7_server[1], [WORD])
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     connected_since = coordinator.connected_since
 
     with pytest.raises(HomeAssistantError):

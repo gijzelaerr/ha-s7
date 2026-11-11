@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from typing import TYPE_CHECKING
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorEntityDescription, SensorStateClass
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import MAX_LENGTH_STATE_STATE, EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -19,6 +19,9 @@ from homeassistant.util import dt as dt_util
 from .const import CHAR_TYPES, DOMAIN, NUMERIC_TYPES, STRING_TYPES, TIME_TYPES, base_type
 from .coordinator import S7Coordinator
 from .entity import S7BaseEntity
+
+if TYPE_CHECKING:
+    from . import S7ConfigEntry
 
 # Every type but BOOL gets a sensor.
 _SENSOR_TYPES = NUMERIC_TYPES | STRING_TYPES | CHAR_TYPES | TIME_TYPES
@@ -75,10 +78,10 @@ def local_timestamp(value: object) -> datetime | None:
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    entry: ConfigEntry,
+    entry: S7ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinator: S7Coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator = entry.runtime_data
     entities: list[SensorEntity] = []
     for raw, tag in coordinator.parsed_tags.items():
         if base_type(tag.datatype) in _SENSOR_TYPES:
