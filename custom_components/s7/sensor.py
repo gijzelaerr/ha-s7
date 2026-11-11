@@ -2,57 +2,75 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorEntityDescription, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import MAX_LENGTH_STATE_STATE, EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN
+from .const import CHAR_TYPES, DOMAIN, NUMERIC_TYPES, STRING_TYPES, TIME_TYPES, base_type
 from .coordinator import S7Coordinator
 from .entity import S7BaseEntity
 
-# Data types that map to a sensor entity (non-BOOL, readable numeric/string)
-_SENSOR_TYPES = {
-    "BYTE",
-    "SINT",
-    "USINT",
-    "CHAR",
-    "WCHAR",
-    "INT",
-    "UINT",
-    "WORD",
-    "DINT",
-    "UDINT",
-    "DWORD",
-    "REAL",
-    "LINT",
-    "ULINT",
-    "LWORD",
-    "LREAL",
-    "STRING",
-    "WSTRING",
-    "FSTRING",
-    "TIME",
-    "LTIME",
-    "S5TIME",
-    "TOD",
-    "LTOD",
-    "DATE",
-    "DT",
-    "LDT",
-    "DTL",
-}
+# Every type but BOOL gets a sensor.
+_SENSOR_TYPES = NUMERIC_TYPES | STRING_TYPES | CHAR_TYPES | TIME_TYPES
+
+_DURATION_TYPES = frozenset({"TIME", "LTIME", "S5TIME"})
+_TIMESTAMP_TYPES = frozenset({"DT", "DTL"})
 
 
-def _base_type(datatype: str) -> str:
-    """Strip ``STRING[20]`` / ``REAL[5]`` down to base ``STRING`` / ``REAL``."""
-    dt = datatype.upper()
-    return dt.split("[", 1)[0] if "[" in dt else dt
+def duration_seconds(value: object) -> float | None:
+    """Turn a decoded TIME, LTIME or S5TIME into seconds.
+
+    python-snap7 gives LTIME as a timedelta, TIME as ``[-]d:h:m:s.mmm`` and
+    S5TIME as ``h:mm:ss[.ffffff]``.
+    """
+    if isinstance(value, timedelta):
+        return value.total_seconds()
+    if not isinstance(value, str):
+        return None
+    negative = value.startswith("-")
+    try:
+        parts = [float(part) for part in value.lstrip("-").split(":")]
+    except ValueError:
+        return None
+    if len(parts) == 4:
+        days, hours, minutes, seconds = parts
+    elif len(parts) == 3:
+        days = 0.0
+        hours, minutes, seconds = parts
+    else:
+        return None
+    # Rounded to the microsecond, the finest step any of the three types has here.
+    total = round(days * 86400 + hours * 3600 + minutes * 60 + seconds, 6)
+    return -total if negative else total
+
+
+def local_timestamp(value: object) -> datetime | None:
+    """Turn a decoded DT or DTL into a datetime with a time zone.
+
+    The PLC stores wall-clock time without a zone (python-snap7 gives DT as an
+    ISO string and DTL as a naive datetime), and a timestamp sensor needs one,
+    so the value is taken to be in Home Assistant's time zone.
+    """
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value)
+        except ValueError:
+            return None
+    if not isinstance(value, datetime):
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=dt_util.get_default_time_zone())
+    return value
 
 
 async def async_setup_entry(
@@ -63,49 +81,78 @@ async def async_setup_entry(
     coordinator: S7Coordinator = hass.data[DOMAIN][entry.entry_id]
     entities: list[SensorEntity] = []
     for raw, tag in coordinator.parsed_tags.items():
-        if _base_type(tag.datatype) in _SENSOR_TYPES:
+        if base_type(tag.datatype) in _SENSOR_TYPES:
             entities.append(S7Sensor(coordinator, raw))
 
     # Diagnostic sensors (disabled by default; enable via Device settings).
-    entities.extend(
-        [
-            S7DiagnosticSensor(
-                coordinator,
-                metric="read_count",
-                name="Read count",
-                state_class=SensorStateClass.TOTAL_INCREASING,
-            ),
-            S7DiagnosticSensor(
-                coordinator,
-                metric="write_count",
-                name="Write count",
-                state_class=SensorStateClass.TOTAL_INCREASING,
-            ),
-            S7DiagnosticSensor(
-                coordinator,
-                metric="last_read_latency",
-                name="Last read latency",
-                device_class=SensorDeviceClass.DURATION,
-                native_unit_of_measurement=UnitOfTime.SECONDS,
-                suggested_display_precision=3,
-                state_class=SensorStateClass.MEASUREMENT,
-            ),
-            S7DiagnosticSensor(
-                coordinator,
-                metric="connected_since",
-                name="Connected since",
-                device_class=SensorDeviceClass.TIMESTAMP,
-            ),
-        ]
-    )
+    entities.extend(S7DiagnosticSensor(coordinator, description) for description in _DIAGNOSTIC_SENSORS)
     async_add_entities(entities)
 
 
 class S7Sensor(S7BaseEntity, SensorEntity):
+    """A tag as a sensor, with the device class and unit its type implies."""
+
+    def __init__(self, coordinator: S7Coordinator, tag: str) -> None:
+        super().__init__(coordinator, tag)
+        self._datatype = base_type(coordinator.parsed_tags[tag].datatype)
+        if self._datatype in NUMERIC_TYPES:
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+        elif self._datatype in _DURATION_TYPES:
+            self._attr_device_class = SensorDeviceClass.DURATION
+            self._attr_native_unit_of_measurement = UnitOfTime.SECONDS
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+        elif self._datatype == "DATE":
+            self._attr_device_class = SensorDeviceClass.DATE
+        elif self._datatype in _TIMESTAMP_TYPES:
+            self._attr_device_class = SensorDeviceClass.TIMESTAMP
+
     @property
-    def native_value(self):
+    def native_value(self) -> StateType | date | datetime:
         value = self._value()
+        if self._datatype in _DURATION_TYPES:
+            return duration_seconds(value)
+        if self._datatype in _TIMESTAMP_TYPES:
+            return local_timestamp(value)
         return value[:MAX_LENGTH_STATE_STATE] if isinstance(value, str) else value
+
+
+@dataclass(frozen=True, kw_only=True)
+class S7DiagnosticSensorDescription(SensorEntityDescription):
+    """A coordinator metric and how to read it."""
+
+    value_fn: Callable[[S7Coordinator], StateType | datetime]
+
+
+# The key is part of the unique ID: do not rename.
+_DIAGNOSTIC_SENSORS: tuple[S7DiagnosticSensorDescription, ...] = (
+    S7DiagnosticSensorDescription(
+        key="read_count",
+        name="Read count",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        value_fn=lambda coordinator: coordinator.read_count,
+    ),
+    S7DiagnosticSensorDescription(
+        key="write_count",
+        name="Write count",
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        value_fn=lambda coordinator: coordinator.write_count,
+    ),
+    S7DiagnosticSensorDescription(
+        key="last_read_latency",
+        name="Last read latency",
+        device_class=SensorDeviceClass.DURATION,
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        suggested_display_precision=3,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda coordinator: coordinator.last_read_latency,
+    ),
+    S7DiagnosticSensorDescription(
+        key="connected_since",
+        name="Connected since",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value_fn=lambda coordinator: coordinator.connected_since,
+    ),
+)
 
 
 class S7DiagnosticSensor(CoordinatorEntity[S7Coordinator], SensorEntity):
@@ -115,31 +162,22 @@ class S7DiagnosticSensor(CoordinatorEntity[S7Coordinator], SensorEntity):
     enable them from the device page when debugging.
     """
 
+    entity_description: S7DiagnosticSensorDescription
     _attr_has_entity_name = True
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
 
-    def __init__(
-        self,
-        coordinator: S7Coordinator,
-        *,
-        metric: str,
-        name: str,
-        **sensor_attrs: Any,
-    ) -> None:
+    def __init__(self, coordinator: S7Coordinator, description: S7DiagnosticSensorDescription) -> None:
         super().__init__(coordinator)
-        self._metric = metric
-        self._attr_name = name
-        self._attr_unique_id = f"{coordinator.plc_id}_diag_{metric}"
+        self.entity_description = description
+        self._attr_unique_id = f"{coordinator.plc_id}_diag_{description.key}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, coordinator.plc_id)},
             name=f"S7 PLC {coordinator.host}",
             manufacturer="Siemens",
             model="S7",
         )
-        for key, value in sensor_attrs.items():
-            setattr(self, f"_attr_{key}", value)
 
     @property
-    def native_value(self) -> Any:
-        return getattr(self.coordinator, self._metric, None)
+    def native_value(self) -> StateType | datetime:
+        return self.entity_description.value_fn(self.coordinator)

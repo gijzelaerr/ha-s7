@@ -4,6 +4,9 @@ from collections.abc import Mapping
 from datetime import timedelta
 from typing import Any
 
+from homeassistant.const import Platform
+from snap7.type import Area
+
 DOMAIN = "s7"
 
 # Config entry keys
@@ -39,4 +42,43 @@ def plc_id(data: Mapping[str, Any]) -> str:
 
 
 # Platforms this integration provides
-PLATFORMS = ["sensor", "binary_sensor", "switch", "number", "text"]
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    Platform.BINARY_SENSOR,
+    Platform.SWITCH,
+    Platform.NUMBER,
+    Platform.TEXT,
+]
+
+# Areas a tag can be written in: data blocks, flags (M) and outputs (Q).
+# Inputs (I) are read-only.
+WRITABLE_AREAS = frozenset({Area.DB, Area.MK, Area.PA})
+
+# Types that decode to an int or a float.
+NUMERIC_TYPES = frozenset(
+    {
+        "BYTE",
+        "SINT",
+        "USINT",
+        "INT",
+        "UINT",
+        "WORD",
+        "DINT",
+        "UDINT",
+        "DWORD",
+        "REAL",
+        "LINT",
+        "ULINT",
+        "LWORD",
+        "LREAL",
+    }
+)
+FLOAT_TYPES = frozenset({"REAL", "LREAL"})
+STRING_TYPES = frozenset({"STRING", "WSTRING", "FSTRING"})
+CHAR_TYPES = frozenset({"CHAR", "WCHAR"})
+TIME_TYPES = frozenset({"TIME", "LTIME", "S5TIME", "TOD", "LTOD", "DATE", "DT", "LDT", "DTL"})
+
+
+def base_type(datatype: str) -> str:
+    """Strip ``STRING[20]`` down to ``STRING``, in upper case."""
+    return datatype.upper().split("[", 1)[0]
