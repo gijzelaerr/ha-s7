@@ -123,7 +123,7 @@ data:
 ## Requirements
 
 - Home Assistant ≥ 2026.9 (which runs on Python ≥ 3.14.2)
-- python-snap7 ≥ 3.5.0 and s7commplus ≥ 0.4.0 (installed automatically by Home Assistant)
+- python-snap7 ≥ 3.5.0 and s7commplus ≥ 0.6.0 (installed automatically by Home Assistant)
 
 ## Development
 
