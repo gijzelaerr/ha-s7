@@ -6,11 +6,17 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-14
+
 ### Added
-- CPU state sensor per PLC, showing Run or Stop. It is unknown where the PLC does not report its state: an S7-1200 on S7CommPlus, or a classic CPU that refuses the query. Each poll sends one more request for it.
+- CPU state sensor per PLC, showing Run or Stop. It is unknown where the PLC does not report its state: an S7-1200 on S7CommPlus, or a classic CPU that refuses the query. Each poll sends one more request for it. (#71)
 
 ### Changed
-- Requires `python-snap7` 3.5.0, the first version that reads the real CPU state.
+- Requires `python-snap7` 3.5.0, the first version that reads the real CPU state. (#71)
+- Requires `s7commplus` 0.6.0.
+
+### Fixed
+- An S7-1500 on S7CommPlus without TLS no longer loses its connection every 25 minutes. The fix is in `s7commplus` 0.6.0 and was not run on a PLC.
 
 ## [0.3.0] - 2026-11-11
 
@@ -102,7 +108,8 @@ First release.
 - S7CommPlus has only been tested against an emulator, not a physical PLC. TLS and password authentication, and the M/I/Q areas over S7CommPlus, are untested.
 - Tags use absolute byte-offset addressing. On S7-1200/1500, data blocks must have "Optimized block access" turned off; symbolic access to optimized blocks is not implemented.
 
-[Unreleased]: https://github.com/gijzelaerr/ha-s7/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/gijzelaerr/ha-s7/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/gijzelaerr/ha-s7/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/gijzelaerr/ha-s7/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/gijzelaerr/ha-s7/compare/v0.1.3...v0.1.4
