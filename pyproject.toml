@@ -26,8 +26,8 @@ dev = [
     "homeassistant>=2024.12.0",
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
-    # 0.13.368+ pins the Home Assistant 2026.10 beta; stay on stable until it ships.
-    "pytest-homeassistant-custom-component>=0.13.375,<0.13.376",
+    # Home Assistant's own test package; each release pins one Home Assistant release.
+    "pytest-homeassistant>=2026.11.2,<2026.11.3",
     "ruff>=0.17.5",
     "mypy>=2.4.1",
     "pre-commit>=4.7.0",
@@ -64,7 +64,7 @@ module = "homeassistant.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = "pytest_homeassistant_custom_component.*"
+module = "pytest_homeassistant.*"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
@@ -73,4 +73,8 @@ disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# Let Home Assistant install its httpx alias before respx is imported.
+addopts = "-p no:respx"
+pythonpath = ["."]
 testpaths = ["tests"]

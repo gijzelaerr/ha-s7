@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.s7.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_RACK, CONF_SLOT, CONF_TAGS, DOMAIN
 from custom_components.s7.diagnostics import async_get_config_entry_diagnostics

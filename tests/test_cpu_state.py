@@ -6,7 +6,7 @@ from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 from s7commplus import CPUState as CommPlusCPUState
 
 from custom_components.s7.const import (
