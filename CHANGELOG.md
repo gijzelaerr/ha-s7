@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- The tests use Home Assistant's own `pytest-homeassistant` package (2026.11.2) instead of `pytest-homeassistant-custom-component`, which its maintainer has declared broken and which stopped at Home Assistant 2026.10.4. This moves the test environment to Home Assistant 2026.11.2 and Pillow 13.0.0. The integration itself is unchanged.
+
 ## [0.4.0] - 2026-11-14
 
 ### Added

@@ -19,12 +19,6 @@ from snap7.type import SrvArea
 
 
 @pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):  # noqa: F811
-    """Auto-enable loading `custom_components/` for every test."""
-    yield
-
-
-@pytest.fixture(autouse=True)
 def _allow_sockets(socket_enabled):  # noqa: F811
     """Allow real network sockets (needed to talk to the snap7 server fixture)."""
     yield
