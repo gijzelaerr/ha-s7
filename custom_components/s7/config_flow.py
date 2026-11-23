@@ -33,7 +33,7 @@ from .const import (
     plc_id,
 )
 from .coordinator import parse_tags as _parse_tags_for_validation
-from .plc import create_client
+from .plc import create_client, is_authentication_error
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,9 +68,10 @@ def split_tags(raw: str) -> list[str]:
 def _blocking_test_read(connection: Mapping[str, Any], tags: list[str]) -> tuple[str | None, str]:
     """Connect over a throwaway connection and read the tags once.
 
-    Returns ``(None, "")`` when it worked, ``("cannot_connect", "")`` when the
-    PLC did not accept the connection, and ``("cannot_read_tag", names)`` when
-    it did but the named tags could not be read.
+    Returns ``(None, "")`` when it worked, ``("invalid_auth", "")`` when the PLC
+    refused the password, ``("cannot_connect", "")`` when it did not accept the
+    connection for another reason, and ``("cannot_read_tag", names)`` when it
+    did but the named tags could not be read.
     """
     parsed = _parse_tags_for_validation(tags)
     client = create_client(
@@ -86,6 +87,9 @@ def _blocking_test_read(connection: Mapping[str, Any], tags: list[str]) -> tuple
         try:
             client.connect()
         except Exception as err:
+            if is_authentication_error(err):
+                _LOGGER.warning("PLC refused the password: %s", err)
+                return "invalid_auth", ""
             _LOGGER.warning("PLC connection test failed: %s", err)
             return "cannot_connect", ""
         if not parsed:

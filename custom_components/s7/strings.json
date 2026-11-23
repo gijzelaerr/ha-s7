@@ -44,6 +44,7 @@
     "error": {
       "cannot_connect": "Could not connect to the PLC. Check host, port, protocol and rack/slot. On S7-1200/1500 the legacy protocol needs PUT/GET to be permitted.",
       "cannot_read_tag": "Connected to the PLC, but could not read: {tag}. Check that the address exists and the data block is long enough. On S7-1200/1500 the data block must have 'Optimized block access' turned off.",
+      "invalid_auth": "The PLC refused the password. Check the password set in the PLC's protection settings.",
       "invalid_tags": "One or more tag addresses could not be parsed, or are arrays (not supported). Check the syntax."
     },
     "abort": {
@@ -67,6 +68,7 @@
     "error": {
       "cannot_connect": "Could not connect to the PLC to check the tags, so nothing was saved.",
       "cannot_read_tag": "Connected to the PLC, but could not read: {tag}. Check that the address exists and the data block is long enough. On S7-1200/1500 the data block must have 'Optimized block access' turned off.",
+      "invalid_auth": "The PLC refused the stored password, so nothing was saved. Change the password with Reconfigure.",
       "invalid_tags": "One or more tag addresses could not be parsed, or are arrays (not supported). Check the syntax."
     }
   },

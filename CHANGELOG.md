@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- Setup, Reconfigure and Options now say when the PLC refused the password, instead of reporting that the connection failed. On an S7CommPlus connection without TLS this works with the current `s7commplus`. On a TLS connection it needs an `s7commplus` release that raises `S7AuthenticationError` there too (gijzelaerr/s7commplus#223); until then a refused password is still reported as a failed connection.
+
 ### Changed
 - The tests use Home Assistant's own `pytest-homeassistant` package (2026.11.2) instead of `pytest-homeassistant-custom-component`, which its maintainer has declared broken and which stopped at Home Assistant 2026.10.4. This moves the test environment to Home Assistant 2026.11.2 and Pillow 13.0.0. The integration itself is unchanged.
 
