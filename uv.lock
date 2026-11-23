@@ -1014,7 +1014,7 @@ dev = [
     { name = "pytest-homeassistant", specifier = ">=2026.11.2,<2026.11.3" },
     { name = "python-snap7", specifier = ">=3.5.0" },
     { name = "ruff", specifier = ">=0.17.5" },
-    { name = "s7commplus", specifier = ">=0.6.0" },
+    { name = "s7commplus", specifier = ">=0.7.0" },
 ]
 
 [[package]]
@@ -2223,14 +2223,14 @@ wheels = [
 
 [[package]]
 name = "s7commplus"
-version = "0.6.0"
+version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6c/91/c2102d06fcdb645ca4bd0b5ffc273b703ca9ac6936aca8e17dc5ecd985fb/s7commplus-0.6.0.tar.gz", hash = "sha256:41a89c4b64e3f89e9129a990d0ce1c213a9453eb0c77338a99fea91857284a4c", size = 603106, upload-time = "2026-11-14T06:21:18.634Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/62/0e56af1a9d92b8fd263f72f076539a0c667e2455750243a0d697ef2b3261/s7commplus-0.7.0.tar.gz", hash = "sha256:448b6fe98577b1ed115c0ee8b2933b927c012a026f06f5719147cf728a907b56", size = 543478, upload-time = "2026-11-19T07:17:43.781Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/93/07/5e72ea6322f63d1593890ab54b10b3ecf1c0361996f211fb2fc2ed494714/s7commplus-0.6.0-py3-none-any.whl", hash = "sha256:67eec6aea78a6897091ba24b18f417811f53efa14256a506a3e3219310191152", size = 304896, upload-time = "2026-11-14T06:21:17.153Z" },
+    { url = "https://files.pythonhosted.org/packages/4b/f6/00a0f3b002ba4ff1167528a8c5b9383d947df32df4b03d0f3035729d2459/s7commplus-0.7.0-py3-none-any.whl", hash = "sha256:c1221af7afbc2e3d7fd868dc5f4dc329c1cfb72e26f79f341d5c46673a27a824", size = 318759, upload-time = "2026-11-19T07:17:42.339Z" },
 ]
 
 [[package]]
