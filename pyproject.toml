@@ -28,7 +28,7 @@ dev = [
     "pytest-asyncio>=0.23",
     # Home Assistant's own test package; each release pins one Home Assistant release.
     "pytest-homeassistant>=2026.11.2,<2026.11.3",
-    "ruff>=0.17.5",
+    "ruff>=0.17.6",
     "mypy>=2.4.1",
     "pre-commit>=4.7.0",
 ]
