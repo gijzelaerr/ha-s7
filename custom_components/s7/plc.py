@@ -79,6 +79,17 @@ def is_connection_error(err: BaseException) -> bool:
     return isinstance(err, _CONNECTION_ERRORS)
 
 
+_AUTHENTICATION_ERRORS: tuple[type[BaseException], ...] = (
+    legacy_error.S7AuthenticationError,
+    commplus_error.S7AuthenticationError,
+)
+
+
+def is_authentication_error(err: BaseException) -> bool:
+    """Whether ``err`` means the PLC refused the password."""
+    return isinstance(err, _AUTHENTICATION_ERRORS)
+
+
 # What each library calls the operating states the sensor reports. Anything
 # else (python-snap7's "S7CpuStatusUnknown", s7commplus's "UNKNOWN") is None.
 _LEGACY_CPU_STATES = {"S7CpuStatusRun": CPU_STATE_RUN, "S7CpuStatusStop": CPU_STATE_STOP}
